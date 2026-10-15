@@ -252,6 +252,22 @@ class VisionPipeline:
         stage_status["segmentation"] = s4_status
         latencies["stage4_segmentation"] = s4_latency
 
+        # 5b. Prioritization: rank primary-first (major collision before minor
+        # defects) and stamp component/priority/score. Same ordered list feeds
+        # severity, classifications, overlay, chips, and PDF report so every
+        # surface agrees on what the primary damage is.
+        from ml.vision.prioritization import prioritize_detections
+
+        t_prio = time.perf_counter()
+        rear_view = self._detect_rear_view(image, segmented_detections)
+        segmented_detections = prioritize_detections(
+            segmented_detections,
+            image_width=transforms.original_width,
+            image_height=transforms.original_height,
+            rear_view=rear_view,
+        )
+        latencies["prioritization"] = round((time.perf_counter() - t_prio) * 1000.0, 2)
+
         # 6. Severity Assessment
         t_sev = time.perf_counter()
         severity = calculate_severity(
@@ -277,13 +293,20 @@ class VisionPipeline:
         # its status is reported — but the exposed classes are derived from
         # the final post-gate detections so boxes and chips cannot disagree.
         if has_damage:
+            # Order classes by priority (first appearance in the prioritized
+            # detection list), not by raw confidence, so chips/report lead
+            # with the primary damage class.
             best_by_label: dict[str, float] = {}
+            label_order: list[str] = []
             for det in segmented_detections:
-                if det.confidence > best_by_label.get(det.label, -1.0):
+                if det.label not in best_by_label:
+                    label_order.append(det.label)
+                    best_by_label[det.label] = det.confidence
+                elif det.confidence > best_by_label[det.label]:
                     best_by_label[det.label] = det.confidence
             classes = [
-                ClassificationItem(label=label, confidence=round(conf, 4))
-                for label, conf in sorted(best_by_label.items(), key=lambda kv: kv[1], reverse=True)
+                ClassificationItem(label=label, confidence=round(best_by_label[label], 4))
+                for label in label_order
             ]
         return ImageFinding(
             image_id=img_id,
@@ -310,6 +333,35 @@ class VisionPipeline:
             warnings=img_warnings,
             latency_ms=latencies,
         )
+
+    @staticmethod
+    def _detect_rear_view(image: Image.Image, detections) -> bool:
+        """Evidence-based viewpoint check: substantial red taillight reflector => rear view.
+
+        Taillights have saturated red reflectors ((hue <= 8 | hue >= 172) & sat >= 80 & val >= 60).
+        A genuine taillight cluster contains a concentrated red mass (>= 300 connected red pixels).
+        Frontal collisions (which have negligible or zero red pixels) are never flagged as rear.
+        """
+        try:
+            import cv2
+            import numpy as np
+
+            arr = np.asarray(image.convert("RGB"), dtype=np.uint8)
+            hsv = cv2.cvtColor(arr, cv2.COLOR_RGB2HSV)
+            h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+            red = ((h <= 8) | (h >= 172)) & (s >= 80) & (v >= 60)
+            if int(red.sum()) < 350:
+                return False
+
+            # Check if there is a concentrated red cluster representing a taillight
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(red.astype(np.uint8))
+            for i in range(1, num_labels):
+                area = stats[i, cv2.CC_STAT_AREA]
+                if area >= 300:
+                    return True
+            return False
+        except Exception:
+            return False
 
     @staticmethod
     def _content_hash(image_input: Union[bytes, str, Path, Image.Image]) -> Optional[str]:

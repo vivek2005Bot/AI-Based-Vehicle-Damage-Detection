@@ -229,7 +229,7 @@ class InspectionSupervisor:
             "risk": risk_dict,
             "knowledge": rag_dict,
             "model_metadata": {
-                "vision_pipeline_version": "1.1.0",
+                "vision_pipeline_version": "1.2.0",
                 "filter_model": "classical_cv_v1",
                 "classifier_model": "classical_cv_v1",
                 "detector_model": "classical_cv_v1",

@@ -176,19 +176,31 @@ def render_inspection_pdf(
     elements.append(Paragraph("1. Exterior Computer Vision Findings", h2_style))
     images = report_data.get("images", [])
     if images:
-        findings_rows = [["Image File", "Damage Detected", "Identified Classes", "Detections", "Severity"]]
+        findings_rows = [["Image File", "Damage Detected", "Primary Finding", "All Classes", "Detections", "Severity"]]
         for img in images:
             classes_str = ", ".join([c["label"] for c in img.get("classifications", [])]) or "None"
-            det_count = len(img.get("detections", []))
+            dets = img.get("detections", [])
+            det_count = len(dets)
             sev_lvl = img.get("severity", {}).get("level", "unavailable").upper()
+            if dets:
+                first = dets[0]
+                comp = (first.get("component") or "").replace("_", " ")
+                primary_str = f"{first.get('label', '?')} ({round(float(first.get('confidence', 0)) * 100)}%)"
+                if first.get("priority") == "primary":
+                    primary_str = "PRIMARY: " + primary_str
+                if comp:
+                    primary_str += f" [{comp}]"
+            else:
+                primary_str = "None"
             findings_rows.append([
                 img.get("filename", "image"),
                 _assessment_label(img),
+                primary_str,
                 classes_str,
                 str(det_count),
                 sev_lvl,
             ])
-        findings_table = Table(findings_rows, colWidths=[130, 80, 160, 70, 90])
+        findings_table = Table(findings_rows, colWidths=[100, 70, 150, 100, 55, 55])
         findings_table.setStyle(
             TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E2E8F0")),

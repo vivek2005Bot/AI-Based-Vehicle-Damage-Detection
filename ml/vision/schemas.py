@@ -71,6 +71,14 @@ class DetectionItem(BaseModel):
     mask: Optional[List[List[float]]] = Field(default=None, description="Polygon contour points [[x, y], ...]")
     mask_pixel_area: Optional[float] = Field(default=None, ge=0.0)
     relative_area: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    # Prioritization + component (major-collision fix). Optional so older
+    # payloads still parse; pipeline always stamps them on new findings.
+    # priority: "primary" (most prominent validated damage) | "secondary".
+    # component: positional estimate (hood, grille_fascia, front_bumper,
+    #   headlight, front_fender, windshield, ...) — advisory, not trained parts.
+    component: Optional[str] = Field(default=None)
+    priority: str = Field(default="secondary")
+    priority_score: Optional[float] = Field(default=None, ge=0.0)
 
 
 class SeverityAssessment(BaseModel):

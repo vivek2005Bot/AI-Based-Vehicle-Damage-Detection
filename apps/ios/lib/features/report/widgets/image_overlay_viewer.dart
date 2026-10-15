@@ -32,6 +32,8 @@ class _ImageOverlayViewerState extends State<ImageOverlayViewer> {
         return Colors.deepOrangeAccent;
       case 'broken_light':
         return Colors.amber;
+      case 'broken_mirror':
+        return Colors.orangeAccent;
       case 'dent':
         return Colors.blueAccent;
       case 'scratch':
@@ -293,7 +295,7 @@ class _ImageOverlayViewerState extends State<ImageOverlayViewer> {
             ),
           ),
 
-          // Legend / Detection Instances
+          // Legend / Detection Instances (backend priority order: primary first)
           if (detections.isNotEmpty)
             Padding(
               padding: const EdgeInsets.all(12),
@@ -302,15 +304,24 @@ class _ImageOverlayViewerState extends State<ImageOverlayViewer> {
                 runSpacing: 6,
                 children: detections.map((det) {
                   final color = _getClassColor(det.label);
+                  final isPrimary = det.priority == 'primary';
+                  final comp = (det.component ?? '').replaceAll('_', ' ');
+                  final labelText = StringBuffer(det.label.toUpperCase())
+                    ..write(' (${(det.confidence * 100).toInt()}%)')
+                    ..write(isPrimary ? ' · PRIMARY' : '')
+                    ..write(comp.isNotEmpty ? ' · $comp' : '');
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.12),
+                      color: color.withValues(alpha: isPrimary ? 0.22 : 0.12),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: color.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: color.withValues(alpha: isPrimary ? 0.9 : 0.4),
+                        width: isPrimary ? 1.5 : 1.0,
+                      ),
                     ),
                     child: Text(
-                      '${det.label.toUpperCase()} (${(det.confidence * 100).toInt()}%)',
+                      labelText.toString(),
                       style: TextStyle(
                         color: color,
                         fontSize: 11,
@@ -404,10 +415,13 @@ class _DamageOverlayPainter extends CustomPainter {
           ..style = PaintingStyle.stroke;
         canvas.drawRect(rect, boxPaint);
 
-        // Label Tag
+        // Label Tag (primary finding marked; same backend order as chips)
+        final tagText = det.priority == 'primary'
+            ? ' ★ ${det.label} ${(det.confidence * 100).toInt()}% '
+            : ' ${det.label} ${(det.confidence * 100).toInt()}% ';
         final tp = TextPainter(
           text: TextSpan(
-            text: ' ${det.label} ${(det.confidence * 100).toInt()}% ',
+            text: tagText,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 10,
@@ -433,9 +447,30 @@ class _DamageOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DamageOverlayPainter oldDelegate) {
+    // Must compare detections to prevent stale boxes from previous image
+    // persisting on newly selected image (critical bug fix).
+    if (oldDelegate.detections.length != detections.length) return true;
+    for (int i = 0; i < detections.length; i++) {
+      final a = oldDelegate.detections[i];
+      final b = detections[i];
+      if (a.label != b.label ||
+          a.confidence != b.confidence ||
+          a.priority != b.priority ||
+          a.component != b.component ||
+          a.bboxXyxy.length != b.bboxXyxy.length) {
+        return true;
+      }
+      for (int j = 0; j < b.bboxXyxy.length; j++) {
+        if (a.bboxXyxy[j] != b.bboxXyxy[j]) return true;
+      }
+    }
     return oldDelegate.showBoxes != showBoxes ||
         oldDelegate.showMasks != showMasks ||
         oldDelegate.drawWidth != drawWidth ||
-        oldDelegate.drawHeight != drawHeight;
+        oldDelegate.drawHeight != drawHeight ||
+        oldDelegate.originalWidth != originalWidth ||
+        oldDelegate.originalHeight != originalHeight ||
+        oldDelegate.offsetX != offsetX ||
+        oldDelegate.offsetY != offsetY;
   }
 }

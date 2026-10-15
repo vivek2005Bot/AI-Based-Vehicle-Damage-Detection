@@ -2,7 +2,7 @@
 
 ## Current Active Backend
 
-As of pipeline version **1.1.0** the four vision stages run a **local OpenCV
+As of pipeline version **1.2.0** the four vision stages run a **local OpenCV
 engine** (`ml/vision/classical_engine.py`, registry id `classical_cv_v1`) — no
 neural checkpoints, no network access. Behavior:
 
@@ -33,6 +33,48 @@ neural checkpoints, no network access. Behavior:
 - Scene guardrails (border-spanning rejection, fine-texture gating, local
   contrast normalization) suppress background texture but adversarial scenes
   (reflections, murals, heavy graffiti) can still confuse response channels.
+
+### Major-collision fix (1.2.0) — what changed and why
+
+Root causes found by tracing the severe white-car frontal image
+(`insp_e7736baa/.../19f6218212434986b8822ef7608e2fce.jpg`) from raw response
+maps to the rendered overlay:
+1. **Severe damage was gated away, trivia kept.** Crushed-grille / exposed-
+   internal / headlight fragments fire the chaos/crack channels with
+   edge_share 0.70–0.84, and the single global edge gate (0.40/0.65) rejected
+   every one of them — while a smooth sky/tree highlight (edge 0.21) passed
+   and rendered as `dent 79%` on trees. Fix: channel-aware edge caps
+   (`CHAOS_EDGE_MAX 0.88`, `CRACK_EDGE_MAX 0.92`), deep-shadow hue skip
+   (`DARK_HUE_SKIP_GRAY 60`), sky-band background rejection, and a
+   conservative vehicle-ROI guard (small boxes <25% inside the estimated
+   vehicle box are dropped; large boxes never are).
+2. **Fragmented bumpers missed the size bar.** A crushed bumper shatters into
+   adjacent pieces (area 0.02–0.04), each below the old 0.05/0.06
+   `bumper_smash` minimums, so the main damage rendered as plain `dent`.
+   Fix: fragment-tolerant minimums (`BUMPER_SMASH_MIN_AREA_CHAOS 0.030`,
+   `..._DENT 0.035`, zone `y > 0.60`) plus adjacent-tiny-fragment
+   suppression in `_dedupe` so shatter shards don't multiply boxes.
+3. **No notion of primary damage.** Boxes were ordered by
+   confidence×√area, so a confident minor scratch could outrank the crushed
+   bumper. Fix: `ml/vision/prioritization.py` ranks by class weight × extent
+   × confidence × localization quality, stamps `priority` (`primary` first,
+   rest `secondary`), `component` (positional estimate, rear-view aware via
+   red-taillight sampling), and `priority_score`. Overlay chips, box tags,
+   classifications, and the PDF all consume the same ordered list.
+4. **Shattered lamps unlabeled.** Added a measured bright+edge-dense+mid-
+   height rule emitting `broken_light` on chaos/crack channels.
+
+Verified on the reference images: frontal white car → primary
+`bumper_smash`/`front_bumper` first, buckled hood localized, tree FP gone
+(11→8 boxes, all in vehicle zone); rear white car → primary
+`bumper_smash`/`rear_bumper` with `taillight` identified. Regression tests:
+`tests/test_major_damage.py` (7 tests). Full suite: 39 passed in `.venv`.
+
+Remaining gaps (still require neural retraining, NOT completed):
+- Dent-vs-scratch and exact part boundaries remain heuristic; components are
+  positional estimates, not trained part segmentation.
+- `flat_tire` effectively undetectable; severity weights uncalibrated.
+- See Retraining Plan below for the CarDD/YOLO-seg path with acceptance gate.
 
 ## Abstention semantics (unchanged)
 

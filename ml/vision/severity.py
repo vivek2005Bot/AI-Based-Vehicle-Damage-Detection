@@ -18,6 +18,7 @@ from ml.vision.schemas import DamageSeverityLevel, DetectionItem, SeverityAssess
 DEFAULT_CLASS_WEIGHTS: Dict[str, float] = {
     "bumper_smash": 0.35,
     "glass_crack": 0.25,
+    "broken_mirror": 0.22,
     "flat_tire": 0.20,
     "broken_light": 0.15,
     "dent": 0.12,

@@ -62,6 +62,29 @@ def nms(dets: List[DetectionItem], iou_thresh: float = 0.45) -> List[DetectionIt
     return kept
 
 
+def nms_cross_class(dets: List[DetectionItem], iou_thresh: float = 0.70) -> List[DetectionItem]:
+    """Cross-class NMS: suppress different-label detections with very high IoU.
+    
+    If two detections of different classes overlap almost completely (IoU > 0.70),
+    they likely represent the same physical damage. Keep the higher-confidence one.
+    """
+    kept: List[DetectionItem] = []
+    for det in sorted(dets, key=lambda d: d.confidence, reverse=True):
+        # Check same-class overlap (standard NMS)
+        same_class_dup = any(
+            d.label == det.label and _iou(d.bbox_xyxy, det.bbox_xyxy) > 0.45
+            for d in kept
+        )
+        # Check cross-class overlap (very high IoU)
+        cross_class_dup = any(
+            d.label != det.label and _iou(d.bbox_xyxy, det.bbox_xyxy) > iou_thresh
+            for d in kept
+        )
+        if not same_class_dup and not cross_class_dup:
+            kept.append(det)
+    return kept
+
+
 class Stage3DamageDetector:
     """Stage 3 object detector for vehicle damage instances."""
 
@@ -69,7 +92,7 @@ class Stage3DamageDetector:
         self,
         architecture: str = "classical_cv_v1",
         weights_path: Optional[str] = None,
-        confidence_threshold: float = 0.35,
+        confidence_threshold: float = 0.55,
         iou_threshold: float = 0.45,
         engine: Optional[ClassicalDamageEngine] = None,
     ):
@@ -158,6 +181,11 @@ class Stage3DamageDetector:
                     mask=orig_poly,
                 )
             )
+
+        # Single suppression stage lives in ClassicalDamageEngine._dedupe()
+        # (class-agnostic IoU/IoM). Do NOT apply a second NMS pass here:
+        # duplicate NMS stages disagree and drop correct boxes.
+        # The pipeline applies only the confidence gate downstream.
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
         return detections, StageStatus.COMPLETED, round(latency_ms, 2)

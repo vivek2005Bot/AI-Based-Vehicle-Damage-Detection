@@ -7,6 +7,12 @@ class DetectionModel {
   final List<List<double>>? mask;
   final double? maskPixelArea;
   final double? relativeArea;
+  /// Prioritization (backend-stamped): 'primary' | 'secondary'.
+  final String priority;
+  /// Positional component estimate (hood, grille_fascia, front_bumper,
+  /// headlight, ...). Advisory heuristic, not trained part output.
+  final String? component;
+  final double? priorityScore;
 
   DetectionModel({
     required this.instanceId,
@@ -17,6 +23,9 @@ class DetectionModel {
     this.mask,
     this.maskPixelArea,
     this.relativeArea,
+    this.priority = 'secondary',
+    this.component,
+    this.priorityScore,
   });
 
   factory DetectionModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +50,9 @@ class DetectionModel {
       mask: polygon,
       maskPixelArea: (json['mask_pixel_area'] as num?)?.toDouble(),
       relativeArea: (json['relative_area'] as num?)?.toDouble(),
+      priority: json['priority'] as String? ?? 'secondary',
+      component: json['component'] as String?,
+      priorityScore: (json['priority_score'] as num?)?.toDouble(),
     );
   }
 }
