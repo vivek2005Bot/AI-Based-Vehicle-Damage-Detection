@@ -1,0 +1,375 @@
+{
+  "generated_at": "2026-10-14T17:42:38.957105+00:00",
+  "dataset_root": "/Users/vivekkumar/AI BASED VEHICLE DAMAGE DETECTION/dataset",
+  "obd_root": "/Users/vivekkumar/AI BASED VEHICLE DAMAGE DETECTION/obdiidata",
+  "summary": {
+    "total_images": 20609,
+    "damaged_count": 20455,
+    "undamaged_count": 154,
+    "imbalance_ratio_damaged_to_undamaged": "132.8:1",
+    "total_obd_csv_files": 210,
+    "is_unpaired_dataset": true
+  },
+  "damaged_images": {
+    "count": 20455,
+    "extensions": {
+      ".jpg": 20455
+    },
+    "total_bytes": 8606846643,
+    "avg_byte_size": 420769,
+    "sample_checked": 50,
+    "corrupt_files_found": 0,
+    "corrupt_samples": [],
+    "sample_dimensions": [
+      {
+        "file": "03022020_161010image945451.jpg",
+        "width": 1280,
+        "height": 1280
+      },
+      {
+        "file": "003301.jpg",
+        "width": 1000,
+        "height": 750
+      },
+      {
+        "file": "10012020_095236image503936.jpg",
+        "width": 1280,
+        "height": 1280
+      },
+      {
+        "file": "17022020_095545image205542.jpg",
+        "width": 1280,
+        "height": 1280
+      },
+      {
+        "file": "30012020_104507image76197.jpg",
+        "width": 1280,
+        "height": 1280
+      },
+      {
+        "file": "001516.jpg",
+        "width": 682,
+        "height": 1000
+      },
+      {
+        "file": "14012020_111701image873706.jpg",
+        "width": 1280,
+        "height": 1280
+      },
+      {
+        "file": "16012020_081638image407983.jpg",
+        "width": 1280,
+        "height": 1280
+      },
+      {
+        "file": "05012021_114600image585453.jpg",
+        "width": 1280,
+        "height": 1280
+      },
+      {
+        "file": "data_002838.jpg",
+        "width": 1000,
+        "height": 714
+      }
+    ]
+  },
+  "undamaged_images": {
+    "count": 154,
+    "extensions": {
+      ".png": 154
+    },
+    "total_bytes": 72051534,
+    "avg_byte_size": 467867,
+    "sample_checked": 50,
+    "corrupt_files_found": 0,
+    "corrupt_samples": [],
+    "sample_dimensions": [
+      {
+        "file": "Screen Shot 2023-09-11 at 9.40.11 PM.png",
+        "width": 558,
+        "height": 432
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.39.32 PM.png",
+        "width": 562,
+        "height": 386
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.40.37 PM.png",
+        "width": 474,
+        "height": 418
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.40.54 PM.png",
+        "width": 654,
+        "height": 378
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.41.07 PM.png",
+        "width": 914,
+        "height": 536
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.40.50 PM.png",
+        "width": 510,
+        "height": 512
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.40.05 PM.png",
+        "width": 432,
+        "height": 450
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.41.03 PM.png",
+        "width": 622,
+        "height": 548
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.40.19 PM.png",
+        "width": 704,
+        "height": 406
+      },
+      {
+        "file": "Screen Shot 2023-09-11 at 9.39.47 PM.png",
+        "width": 564,
+        "height": 392
+      }
+    ]
+  },
+  "obd_data": {
+    "directory_exists": true,
+    "total_csv_files": 210,
+    "files_summary": [
+      {
+        "name": "2018-03-01_Seat_Leon_RT_S_Normal.csv",
+        "size_kb": 2029.5,
+        "row_count": 32097,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00b0C]"
+        ]
+      },
+      {
+        "name": "ufpe18.csv",
+        "size_kb": 665.7,
+        "row_count": 2272,
+        "col_count": 27,
+        "sample_cols": [
+          "ENGINE_RUN_TINE ()",
+          "ENGINE_RPM ()",
+          "VEHICLE_SPEED ()",
+          "THROTTLE ()",
+          "ENGINE_LOAD ()",
+          "COOLANT_TEMPERATURE ()"
+        ]
+      },
+      {
+        "name": "2017-07-11_Seat_Leon_S_RT_Frei.csv",
+        "size_kb": 1764.0,
+        "row_count": 28114,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-07-14_Seat_Leon_KA_KA_Frei.csv",
+        "size_kb": 435.3,
+        "row_count": 6829,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-08-07_Seat_Leon_KA_RT_Frei.csv",
+        "size_kb": 1736.0,
+        "row_count": 27371,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2018-03-23_Seat_Leon_S_RT_Stau.csv",
+        "size_kb": 2377.0,
+        "row_count": 38509,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-08-05_Seat_Leon_S_CW_Normal.csv",
+        "size_kb": 2246.9,
+        "row_count": 35469,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2018-03-19_Seat_Leon_RT_KA_Normal.csv",
+        "size_kb": 4367.9,
+        "row_count": 70522,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00b0C]"
+        ]
+      },
+      {
+        "name": "2018-02-26_Seat_Leon_RT_KA_Normal.csv",
+        "size_kb": 3593.3,
+        "row_count": 56676,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-07-26_Seat_Leon_S_KA_Normal.csv",
+        "size_kb": 1362.6,
+        "row_count": 21618,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-08-10_Seat_Leon_S_RT_Frei.csv",
+        "size_kb": 1267.8,
+        "row_count": 19645,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-07-24_Seat_Leon_RT_KA_Normal.csv",
+        "size_kb": 3473.7,
+        "row_count": 54866,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-07-28_Seat_Leon_KA_RT_Stau.csv",
+        "size_kb": 4666.5,
+        "row_count": 73200,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-07-31_Seat_Leon_KA_KA_Frei.csv",
+        "size_kb": 662.2,
+        "row_count": 10637,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      },
+      {
+        "name": "2017-08-08_Seat_Leon_RT_S_Normal.csv",
+        "size_kb": 1546.4,
+        "row_count": 24535,
+        "col_count": 11,
+        "sample_cols": [
+          "Time",
+          "Engine Coolant Temperature [\u00c2\u00b0C]",
+          "Intake Manifold Absolute Pressure [kPa]",
+          "Engine RPM [RPM]",
+          "Vehicle Speed Sensor [km/h]",
+          "Intake Air Temperature [\u00c2\u00b0C]"
+        ]
+      }
+    ],
+    "distinct_schema_signatures": {
+      "Absolute Throttle Position [%] | Air Flow Rate from Mass Flow Sensor [g/s] | Engine Coolant Temperature [\u00b0C] | Engine RPM [RPM] | Intake Air Temperature [\u00b0C] | Intake Manifold Absolute Pressure [kPa] | Time | Vehicle Speed Sensor [km/h]": 42,
+      "COOLANT_TEMPERATURE () | ENGINE_LOAD () | ENGINE_RPM () | ENGINE_RUN_TINE () | LONG_TERM_FUEL_TRIM_BANK_1 () | SHORT_TERM_FUEL_TRIM_BANK_1 () | THROTTLE () | VEHICLE_SPEED ()": 129,
+      "Absolute Throttle Position [%] | Air Flow Rate from Mass Flow Sensor [g/s] | Engine Coolant Temperature [\u00c2\u00b0C] | Engine RPM [RPM] | Intake Air Temperature [\u00c2\u00b0C] | Intake Manifold Absolute Pressure [kPa] | Time | Vehicle Speed Sensor [km/h]": 39
+    }
+  },
+  "annotation_findings": {
+    "bounding_box_annotations_present": false,
+    "segmentation_mask_annotations_present": false,
+    "annotation_files_found": [],
+    "ground_truth_labels_available": [
+      "damaged",
+      "undamaged"
+    ],
+    "stage1_classification_supported": true,
+    "stage2_classification_supported": false,
+    "stage3_detection_supported": false,
+    "stage4_segmentation_supported": false,
+    "note": "Images are organized by binary category folders. Downstream taxonomy, detection, and segmentation require pretrained model adapters (YOLOv8, Mask R-CNN, SAM 2) or external CarDD/VehiDE annotation imports."
+  },
+  "recommendations": []
+}

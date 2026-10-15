@@ -1,0 +1,27 @@
+# Vehicle Damage Severity Calculation Config
+# Formula: S = sum(w_c * r_c), where r_c = A_mask_c / A_veh
+version: "1.0.0"
+method: "relative_area_weighted_by_class"
+
+# Class weights reflecting structural and safety importance
+# Weights sum to 1.0 or are normalized per formulation
+class_weights:
+  bumper_smash: 0.35
+  glass_crack: 0.25
+  flat_tire: 0.20
+  broken_light: 0.15
+  dent: 0.12
+  scratch: 0.08
+
+# Severity level thresholds on normalized score S
+thresholds:
+  low_max: 0.05       # S < 0.05 -> Low
+  medium_max: 0.20    # 0.05 <= S < 0.20 -> Medium
+  high_min: 0.20      # S >= 0.20 -> High
+
+# Handling missing vehicle area (A_veh)
+fallback_behavior:
+  use_image_area_as_denominator: true
+  flag_calibration_provisional: true
+  unit_of_measurement: "pixel_ratio"
+  physical_area_conversion_enabled: false # Requires validated scale reference

@@ -1,0 +1,61 @@
+# Canonical damage taxonomy defined in ANTIGRAVITY_PROJECT_SPEC.md Section 2.2
+canonical_classes:
+  - scratch
+  - dent
+  - glass_crack
+  - bumper_smash
+  - flat_tire
+  - broken_light
+
+# Explicit mapping rules for raw dataset labels to canonical classes
+source_datasets:
+  raw_directory_labels:
+    damaged:
+      action: "stage1_filter_positive"
+      description: "Any vehicle showing structural, surface, or component damage"
+    undamaged:
+      action: "stage1_filter_negative"
+      description: "Intact vehicle with no visible structural or surface damage"
+
+  cardd_dataset:
+    scratch:
+      canonical: "scratch"
+      action: "direct"
+    dent:
+      canonical: "dent"
+      action: "direct"
+    crack:
+      canonical: "glass_crack"
+      action: "direct"
+    glass_shatter:
+      canonical: "glass_crack"
+      action: "merge_to:glass_crack"
+    lamp_broken:
+      canonical: "broken_light"
+      action: "merge_to:broken_light"
+    tire_flat:
+      canonical: "flat_tire"
+      action: "merge_to:flat_tire"
+    bumper_damage:
+      canonical: "bumper_smash"
+      action: "merge_to:bumper_smash"
+
+  vehide_dataset:
+    scratch:
+      canonical: "scratch"
+      action: "direct"
+    dent:
+      canonical: "dent"
+      action: "direct"
+    broken_glass:
+      canonical: "glass_crack"
+      action: "merge_to:glass_crack"
+    broken_light:
+      canonical: "broken_light"
+      action: "direct"
+    flat_tire:
+      canonical: "flat_tire"
+      action: "direct"
+    bumper_smash:
+      canonical: "bumper_smash"
+      action: "direct"

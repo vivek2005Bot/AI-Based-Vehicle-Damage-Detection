@@ -1,0 +1,84 @@
+{
+  "comment": "Hand-annotated validation subset for ClassicalDamageEngine gate tuning. Boxes are class-agnostic [x1,y1,x2,y2] in original-image pixels; drawn generously (IoU>=0.20 OR det-center-inside-GT counts as a match). Positives carry at least one box covering all visible damage; negatives must produce zero detections. Negative globs rely on folder-as-label (dataset/undamaged = no damage).",
+  "positives": [
+    {
+      "path": "private_uploads/insp_1967fb1e-9738-4eea-8d80-03c5e54bb2ea/5fef71d8fb0747b79c42f2507b0d9653.jpg",
+      "note": "repro: red sedan rear crumple + exposed internals (was FP-heavy)",
+      "boxes": [[55, 225, 296, 405]]
+    },
+    {
+      "path": "private_uploads/insp_66915851-ad1f-4f0a-8391-a73eff0ca327/084680f1c88b45108849b9ba6e49ab3a.jpg",
+      "note": "repro: silver car door crease + rocker scuff (window/mirror boxes are FPs)",
+      "boxes": [[35, 175, 245, 300], [40, 300, 285, 415]]
+    },
+    {
+      "path": "private_uploads/insp_8e65ba73-029d-471e-8756-484fc402d1ca/f5024bb1a01a482ab8c9fd72cfedfe88.jpg",
+      "note": "repro: windshield spiderweb (trees/hood boxes are FPs)",
+      "boxes": [[60, 110, 260, 330]]
+    },
+    {
+      "path": "dataset/damaged/13012020_101022image280650.jpg",
+      "note": "gray bumper scuffs",
+      "boxes": [[100, 250, 1250, 1050]]
+    },
+    {
+      "path": "dataset/damaged/03012020_082207image163380.jpg",
+      "note": "red car rocker/side damage",
+      "boxes": [[200, 650, 800, 1000]]
+    },
+    {
+      "path": "dataset/damaged/17012020_093159image37391.jpg",
+      "note": "red rear bumper damage",
+      "boxes": [[200, 550, 850, 1000]]
+    },
+    {
+      "path": "dataset/damaged/001583.jpg",
+      "note": "black panel dent closeup (shading)",
+      "boxes": [[50, 150, 950, 520]]
+    },
+    {
+      "path": "dataset/damaged/002374.jpg",
+      "note": "white panel scratches + puncture",
+      "boxes": [[250, 200, 850, 620]]
+    },
+    {
+      "path": "dataset/damaged/data_000336.jpg",
+      "note": "windshield cracks (tree reflections on glass - FP trap)",
+      "boxes": [[50, 40, 980, 550]]
+    },
+    {
+      "path": "dataset/damaged/003085.jpg",
+      "note": "truck windshield spiderweb",
+      "boxes": [[150, 40, 600, 380]]
+    },
+    {
+      "path": "dataset/damaged/15012020_105718image62620.jpg",
+      "note": "black rocker damage",
+      "boxes": [[200, 600, 1200, 980]]
+    },
+    {
+      "path": "dataset/damaged/data_002512.jpg",
+      "note": "black rear quarter crumple",
+      "boxes": [[50, 30, 870, 590]]
+    },
+    {
+      "path": "dataset/damaged/001901.jpg",
+      "note": "white door trim detached",
+      "boxes": [[280, 100, 800, 600]]
+    },
+    {
+      "path": "dataset/damaged/31012020_135756image293290.jpg",
+      "note": "front bumper smash, internals exposed",
+      "boxes": [[50, 200, 1250, 870]]
+    },
+    {
+      "path": "dataset/damaged/06012020_122622image741540.jpg",
+      "note": "rocker puncture hole",
+      "boxes": [[250, 480, 1120, 980]]
+    }
+  ],
+  "negative_globs": [
+    "dataset/undamaged/**/*.png"
+  ],
+  "max_negatives": 156
+}

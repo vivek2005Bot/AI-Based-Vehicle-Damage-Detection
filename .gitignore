@@ -1,0 +1,60 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.venv/
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+apps/ios/build/
+apps/ios/.flutter-plugins
+apps/ios/.flutter-plugins-dependencies
+apps/ios/ios/Pods/
+apps/ios/ios/.symlinks/
+apps/ios/ios/Flutter/Flutter.framework
+apps/ios/ios/Flutter/Flutter.podspec
+apps/ios/ios/Flutter/Generated.xcconfig
+apps/ios/ios/Flutter/app.flx
+apps/ios/ios/Flutter/app.zip
+apps/ios/ios/Flutter/flutter_assets/
+apps/ios/ios/ServiceDefinitions.json
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment & Secrets
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# Data & Uploads & Artifacts
+private_uploads/
+ml/artifacts/
+reports/generated/
+data/processed/
+*.sqlite3
+*.db
+dataset/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride

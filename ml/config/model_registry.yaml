@@ -1,0 +1,98 @@
+# Model Registry Configuration
+# Manages architectures, artifact paths, thresholds, and operational status
+version: "1.1.0"
+
+# Active backend note: all four stages currently run the local OpenCV
+# ClassicalDamageEngine ("classical_cv_v1") — real pixel-derived inference with
+# no network access and no neural checkpoints. Neural candidates below remain
+# registered for when trained weights are mounted.
+
+stage1_filter:
+  active_model: "classical_cv_v1"
+  candidates:
+    classical_cv_v1:
+      architecture: "ClassicalDamageEngine (OpenCV anomaly mass -> probability)"
+      input_size: [768, 768]
+      reference_threshold: 0.85
+      calibrated_threshold: 0.85
+      status: "active"
+    efficientnet_b4:
+      architecture: "EfficientNet-B4"
+      input_size: [380, 380]
+      reference_threshold: 0.85
+      calibrated_threshold: 0.85
+      status: "candidate"
+    resnet50:
+      architecture: "ResNet-50"
+      input_size: [224, 224]
+      reference_threshold: 0.85
+      calibrated_threshold: 0.85
+      status: "candidate"
+
+stage2_classifier:
+  active_model: "classical_cv_v1"
+  candidates:
+    classical_cv_v1:
+      architecture: "Geometry-based region labeling (elongation, brightness, area, position)"
+      classes: ["scratch", "dent", "glass_crack", "bumper_smash", "flat_tire", "broken_light"]
+      status: "active"
+    convnext_tiny:
+      architecture: "ConvNeXt-Tiny"
+      input_size: [224, 224]
+      classes: ["scratch", "dent", "glass_crack", "bumper_smash", "flat_tire", "broken_light"]
+      status: "candidate"
+    vit_base:
+      architecture: "ViT-Base-16"
+      input_size: [224, 224]
+      classes: ["scratch", "dent", "glass_crack", "bumper_smash", "flat_tire", "broken_light"]
+      status: "candidate"
+
+stage3_detector:
+  active_model: "classical_cv_v1"
+  candidates:
+    classical_cv_v1:
+      architecture: "Hysteresis anomaly regions -> bbox + pixel contour"
+      input_size: [1024, 1024]
+      confidence_threshold: 0.35
+      iou_threshold: 0.45
+      status: "active"
+    yolov8x:
+      architecture: "YOLOv8x"
+      input_size: [1024, 1024]
+      confidence_threshold: 0.35
+      iou_threshold: 0.45
+      status: "candidate"
+    rt_detr:
+      architecture: "RT-DETR-X"
+      input_size: [640, 640]
+      confidence_threshold: 0.35
+      status: "candidate"
+
+stage4_segmenter:
+  active_model: "classical_cv_contour_v1"
+  candidates:
+    classical_cv_contour_v1:
+      architecture: "Real region contours from Stage 3 -> polygon area / relative area"
+      mask_threshold: null
+      status: "active"
+    mask_rcnn:
+      architecture: "Mask R-CNN ResNet-50-FPN"
+      input_size: [1024, 1024]
+      mask_threshold: 0.50
+      status: "candidate"
+    sam2:
+      architecture: "SAM 2 Hiera-Large"
+      input_size: [1024, 1024]
+      prompt_mode: "box"
+      status: "candidate"
+
+obd_analytics:
+  active_model: "isolation_forest"
+  candidates:
+    isolation_forest:
+      contamination: 0.05
+      n_estimators: 100
+      random_state: 42
+      status: "available"
+    xgboost:
+      status: "requires_labeled_data"
