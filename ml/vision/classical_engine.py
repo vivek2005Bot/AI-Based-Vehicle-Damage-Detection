@@ -60,9 +60,13 @@ PROB_GAIN = 11.0             # saturating mass->probability gain (stage 1)
 # taillight or letterbox seam. Each threshold below rejects a measured FP
 # signature that was confirmed against annotated false positives while true
 # damage (creases, scratches, cracks, crumpled areas) stays below them.
-EDGE_SHARE_MAX = 0.40        # Sobel-edge fraction inside region: object borders
+EDGE_SHARE_MAX_BASE = 0.40   # Base threshold for edge_share gate
                              # (windows/taillights/trees/seams) measure 0.5-0.8;
                              # true dents/scratches measure 0.05-0.25
+# Adaptive edge share: if global image edge density is high, relax the threshold
+# to avoid rejecting valid damage on high-edge images (complex body lines, etc.)
+EDGE_SHARE_MAX_HIGH_EDGE = 0.65  # Threshold when global edge density > HIGH_EDGE_FRAC
+HIGH_EDGE_FRAC = 0.30            # Global Sobel>60 fraction above which image is "high-edge"
 HUE_STD_MAX_DEG = 45.0       # circular std of saturated hues inside the region:
                              # foliage/tint blends measure 60-120 deg; paint
                              # fields measure <25 deg; unsaturated panels skip
@@ -108,6 +112,7 @@ class DamageAnalysis:
     regions: List[DamageRegion] = field(default_factory=list)
     work_width: int = 0
     work_height: int = 0
+    global_edge_share: float = 0.0  # Fraction of pixels with Sobel>60 globally
 
 
 @dataclass
@@ -190,6 +195,12 @@ class ClassicalDamageEngine:
         blur_f = blur_u8.astype(np.float32) / 255.0
         hp_sigma = max(4.0, HP_SIGMA_FRAC * max(ww, wh))
 
+        # Compute global edge density for adaptive thresholding
+        gx = cv2.Sobel(gray_u8.astype(np.float32), cv2.CV_32F, 1, 0, ksize=3)
+        gy = cv2.Sobel(gray_u8.astype(np.float32), cv2.CV_32F, 0, 1, ksize=3)
+        mag = cv2.magnitude(gx, gy)
+        global_edge_share = float((mag > 60.0).mean())
+
         channels = {
             "scratch": self._scratch_response(blur_u8, hp_sigma),
             "dent": self._dent_response(blur_f, hp_sigma),
@@ -200,9 +211,9 @@ class ClassicalDamageEngine:
 
         regions: List[DamageRegion] = []
         for channel_name, resp in channels.items():
-            regions.extend(self._extract_regions(resp, gray_u8, hsv, channel_name, wh, ww))
+            regions.extend(self._extract_regions(resp, gray_u8, hsv, channel_name, wh, ww, global_edge_share))
 
-        regions = self._dedupe(regions)
+        regions = self._dedupe(regions, wh, ww)
         total_mass = sum(r.confidence * math.sqrt(max(r.area_frac, 0.0)) for r in regions)
         probability = 1.0 - math.exp(-self.prob_gain * total_mass)
 
@@ -214,6 +225,7 @@ class ClassicalDamageEngine:
             regions=regions,
             work_width=ww,
             work_height=wh,
+            global_edge_share=global_edge_share,
         )
 
     # Response channels ---------------------------------------------------
@@ -303,6 +315,7 @@ class ClassicalDamageEngine:
         channel: str,
         wh: int,
         ww: int,
+        global_edge_share: float = 0.0,
     ) -> List[DamageRegion]:
         positive = anomaly[anomaly > 0]
         if positive.size < 64:
@@ -357,7 +370,7 @@ class ClassicalDamageEngine:
             # object boundaries / window frames / foliage / uniform fills
             # rather than localized material defects (measured, not assumed).
             evidence = self._region_evidence(hsv, gray_u8, region_mask, wh, ww)
-            if self._gate_region(evidence, channel) is not None:
+            if self._gate_region(evidence, channel, global_edge_share) is not None:
                 continue
 
             label = self._classify_region(
@@ -480,7 +493,7 @@ class ClassicalDamageEngine:
         )
 
     @staticmethod
-    def _gate_region(ev: RegionEvidence, channel: str) -> Optional[str]:
+    def _gate_region(ev: RegionEvidence, channel: str, global_edge_share: float = 0.0) -> Optional[str]:
         """Return a rejection reason if this blob is not a material defect.
 
         Each branch corresponds to a measured false-positive signature
@@ -497,7 +510,12 @@ class ClassicalDamageEngine:
         """
         if ev.gray_std < VARIATION_MIN_STD:
             return "uniform_fill"
-        if ev.edge_share > EDGE_SHARE_MAX:
+        # Adaptive edge share threshold: relax on high-edge images (complex body lines, etc.)
+        if global_edge_share > HIGH_EDGE_FRAC:
+            edge_thresh = EDGE_SHARE_MAX_HIGH_EDGE
+        else:
+            edge_thresh = EDGE_SHARE_MAX_BASE
+        if ev.edge_share > edge_thresh:
             return "edge_dominated"
         if abs(ev.d_sat) > SAT_DIFF_MAX:
             return "context_saturation_mismatch"
@@ -518,7 +536,7 @@ class ClassicalDamageEngine:
         area_frac: float,
         evidence: Optional[RegionEvidence] = None,
     ) -> Optional[str]:
-        """Map a measured region to a canonical damage class (geometry-based)."""
+        """Map a measured region to a canonical damage class (geometry + evidence-based)."""
         x, y, w, h = bbox
         hh, ww = mask.shape[:2]
 
@@ -530,35 +548,63 @@ class ClassicalDamageEngine:
         elongation = float(math.sqrt(eig[1] / eig[0]))
         thin = min(w, h) <= max(8.0, 0.10 * max(ww, hh))
         y_center_rel = (y + h / 2.0) / max(1.0, hh)
+        x_center_rel = (x + w / 2.0) / max(1.0, ww)
         mean_brightness = float(gray_u8[mask.astype(bool)].mean())
 
+        # Extract evidence features if available
+        edge_share = evidence.edge_share if evidence else 0.0
+        gray_std = evidence.gray_std if evidence else 0.0
+        d_sat = evidence.d_sat if evidence else 0.0
+        reg_s_med = evidence.reg_s_med if evidence else 0.0
+        reg_hue_std = evidence.reg_hue_std_deg if evidence else None
+        ring_gray_mean = evidence.ring_gray_mean if evidence else mean_brightness
+
+        # --- SCRATCH channel: thin bright ridges (scratches, paint lines) ---
         if channel == "scratch":
+            # Strong elongation or thinness -> scratch
             if elongation >= 2.2 or thin:
                 return "scratch"
+            # Small compact region on panel -> could be dent or stone chip
+            if area_frac < 0.02:
+                return "dent"
             return "dent" if area_frac < 0.10 else "bumper_smash"
 
+        # --- DENT channel: broad shading deformation (dents, creases) ---
         if channel == "dent":
+            # Large region low in frame -> bumper_smash
             if area_frac >= 0.06 and y_center_rel > 0.62:
                 return "bumper_smash"
+            # Elongated horizontal region on lower half -> possible bumper scrape
+            if elongation >= 1.8 and y_center_rel > 0.55 and thin:
+                return "scratch"
+            # Compact region with moderate elongation -> dent
+            if 1.3 <= elongation < 2.2:
+                return "dent"
+            # Very compact region -> dent
             return "dent"
 
+        # --- CHAOS channel: local std-dev anomaly (shattered, broken components) ---
         if channel == "chaos":
-            # Broken lamp assemblies are small + very bright; large chaotic
-            # regions low in the frame are smashed bumpers / radiators.
+            # Large chaotic region low in frame -> bumper_smash
             if area_frac >= 0.05 and y_center_rel > 0.62:
                 return "bumper_smash"
+            # Small very bright region -> broken_light (headlight/taillight)
             if mean_brightness >= 170.0 and area_frac < 0.08:
                 return "broken_light"
+            # Elongated thin region -> scratch
             if elongation >= 2.5 and thin:
                 return "scratch"
+            # Circular/oval region at bottom -> flat_tire (tire sidewall damage)
+            if 0.7 <= elongation <= 1.3 and y_center_rel > 0.75 and area_frac > 0.01:
+                return "flat_tire"
+            # High edge share + low saturation -> broken component
+            if edge_share > 0.5 and reg_s_med < 50:
+                return "broken_light"
             return "dent"
 
+        # --- CRACK channel: thin dark ridges (glass cracks, panel creases) ---
         if channel == "crack":
-            # The crack channel fires on any thin dark ridge — glass cracks
-            # *and* body-panel crease edges. Only a dark, low-saturation
-            # context (windshield/side glass, tint + seal surroundings) may
-            # carry the glass_crack label; anything brighter is relabeled by
-            # geometry so cracks never land on body panels (screenshot bug).
+            # Dark, low-saturation context -> glass_crack (windshield/side glass)
             if (
                 evidence is not None
                 and evidence.gray_mean <= GLASS_GRAY_MAX
@@ -566,22 +612,26 @@ class ClassicalDamageEngine:
                 and evidence.reg_s_med <= GLASS_SAT_MAX
             ):
                 return "glass_crack"
+            # Elongated thin region -> scratch (panel crease)
             if elongation >= 2.2 or thin:
                 return "scratch"
+            # Compact region -> dent
             return "dent"
 
         return None
 
     @staticmethod
-    def _dedupe(regions: List[DamageRegion]) -> List[DamageRegion]:
+    def _dedupe(regions: List[DamageRegion], wh: int = 768, ww: int = 768) -> List[DamageRegion]:
         """Single suppression stage for all channels (the pipeline must not
         run a second NMS on top of this).
 
         Rules, applied strongest-first, class-agnostic so one physical defect
         never shows up as overlapping "dent + scratch + glass_crack" boxes:
-          * IoU > 0.40 with an kept region  -> duplicate response of same blob
-          * IoM (inter/min-area) > 0.55      -> nested duplicate: a smaller
-            fragment fully inside a kept region (IoU can be < 0.40 there)
+          * IoU > 0.30 with an kept region  -> duplicate response of same blob
+          * IoM (inter/min-area) > 0.40      -> nested duplicate: a smaller
+            fragment fully inside a kept region (IoU can be < 0.30 there)
+          * Boundary artifact rejection: very thin regions (width or height <= 4px)
+            at image edges are likely artifacts
         """
 
         def iou(a, b) -> float:
@@ -608,10 +658,26 @@ class ClassicalDamageEngine:
             small = min(aa, bb)
             return inter / small if small > 0 else 0.0
 
+        def is_boundary_artifact(box, work_w, work_h) -> bool:
+            """Check if a region is a likely boundary artifact (very thin at image edge)."""
+            x1, y1, x2, y2 = box
+            w = x2 - x1
+            h = y2 - y1
+            # Very thin vertical line at left/right edge
+            if w <= 10 and (x1 <= 10 or x2 >= work_w - 10):
+                return True
+            # Very thin horizontal line at top/bottom edge
+            if h <= 10 and (y1 <= 10 or y2 >= work_h - 10):
+                return True
+            return False
+
         kept: List[DamageRegion] = []
         for r in sorted(regions, key=lambda z: z.confidence * math.sqrt(max(z.area_frac, 0.0)), reverse=True):
+            # Reject boundary artifacts
+            if is_boundary_artifact(r.bbox_xyxy, ww, wh):
+                continue
             if any(
-                iou(r.bbox_xyxy, o.bbox_xyxy) > 0.40 or iom(r.bbox_xyxy, o.bbox_xyxy) > 0.55
+                iou(r.bbox_xyxy, o.bbox_xyxy) > 0.30 or iom(r.bbox_xyxy, o.bbox_xyxy) > 0.40
                 for o in kept
             ):
                 continue
