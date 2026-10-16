@@ -325,3 +325,54 @@ def test_regression_shattered_windshield_no_sky_box():
     assert _no_overlapping_boxes(finding.detections)
 
 
+def test_regression_crushed_roof_red_car():
+    """Red car with crushed roof must detect dent on roof as primary without false broken_light or bumper."""
+    import os
+    path = f"{REPO_ROOT}/private_uploads/insp_22f04ade-957e-4377-9dca-c4b2de5ada12/12fbb1ad011445e7b6d85438251fb984.jpg"
+    if not os.path.exists(path):
+        pytest.skip("Red car crushed roof reference image not present")
+    img = Image.open(path).convert("RGB")
+    w, h = img.size
+    finding = VisionPipeline().process_image(img, filename="red_car_crushed_roof.jpg")
+    assert finding.assessment == AssessmentStatus.DAMAGED
+    assert finding.damage_detected is True
+    assert finding.detections, "Must produce detections for crushed roof"
+
+    # Primary detection must localize deformation as dent on roof
+    primary = finding.detections[0]
+    assert primary.priority == "primary"
+    assert primary.label == "dent", f"Expected primary dent deformation, got {primary.label}"
+    assert primary.component == "roof", f"Expected roof component, got {primary.component}"
+
+    # Verify no false broken_light or bumper_smash
+    labels = [d.label for d in finding.detections]
+    components = [d.component for d in finding.detections]
+    assert "broken_light" not in labels, f"Red car paint must not trigger broken_light: {labels}"
+    assert "bumper_smash" not in labels, f"Upper body / window interior must not trigger bumper_smash: {labels}"
+    assert "taillight" not in components, f"Roof must not be mapped to taillight: {components}"
+    assert "rear_bumper" not in components, f"Upper window pillar must not be mapped to rear_bumper: {components}"
+
+    assert _boxes_within_bounds(finding.detections, w, h)
+    assert _no_overlapping_boxes(finding.detections)
+
+
+def test_regression_undamaged_silver_wheel():
+    """Intact silver car wheel and tire must return valid negative (NO_DAMAGE) without hallucinated damage."""
+    import os
+    path = f"{REPO_ROOT}/private_uploads/insp_588dc143-1ea5-4a12-8737-f6d50610a22c/f1b4902e74fa485ba9f3bd67a87898fb.jpg"
+    if not os.path.exists(path):
+        pytest.skip("Undamaged silver wheel reference image not present")
+    img = Image.open(path).convert("RGB")
+    finding = VisionPipeline().process_image(img, filename="undamaged_silver_wheel.jpg")
+
+    assert finding.assessment == AssessmentStatus.NO_DAMAGE, (
+        f"Expected NO_DAMAGE for intact wheel/tire, got {finding.assessment}"
+    )
+    assert finding.damage_detected is False
+    assert len(finding.detections) == 0, (
+        f"Intact wheel/tire should produce 0 detections, got: {[d.label for d in finding.detections]}"
+    )
+    assert finding.damage_probability < finding.filter_threshold
+
+
+

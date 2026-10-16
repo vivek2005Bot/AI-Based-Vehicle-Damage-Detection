@@ -115,7 +115,8 @@ def test_major_front_collision_component_vocabulary():
     )
     allowed = {
         "hood", "grille_fascia", "front_bumper", "bumper", "headlight",
-        "headlight_area", "front_fender", "windshield", "roof_area",
+        "headlight_area", "front_fender", "windshield", "roof_area", "roof",
+        "roof_pillar", "side_mirror",
         "door", "wheel_area", "wheel_tire", "glass", "trunk_lid",
         "rear_bumper", "rear_quarter_panel", "rear_fascia", "taillight",
         "taillight_area",

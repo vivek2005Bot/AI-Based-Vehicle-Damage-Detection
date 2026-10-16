@@ -24,7 +24,7 @@ the correct long-term fix (see docs/model-limitations-and-retraining.md).
 from __future__ import annotations
 
 import math
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from ml.vision.schemas import DetectionItem
 from ml.vision.severity import DEFAULT_CLASS_WEIGHTS, estimate_instance_area
@@ -54,6 +54,7 @@ def infer_component(
     image_height: int,
     rear_view: bool = False,
     mirror_boxes: Optional[List[List[float]]] = None,
+    roof_boxes: Optional[List[List[float]]] = None,
 ) -> str:
     """Infer the affected vehicle component from bounding box and view context.
 
@@ -63,6 +64,8 @@ def infer_component(
     If mirror_boxes are provided and the detection lies adjacent to a broken mirror
     (e.g. broken mirror shell or integrated mirror turn indicator), it is attributed
     to side_mirror.
+    If roof_boxes are provided (overhead or roof damage present), adjacent defects
+    on the upper passenger compartment are mapped to roof.
     """
     x1, y1, x2, y2 = det.bbox_xyxy
     cx = (x1 + x2) / 2.0 / max(1.0, image_width)
@@ -92,17 +95,39 @@ def infer_component(
         comp = "windshield" if cy < 0.55 else "glass"
     elif label == "flat_tire":
         return "wheel_tire"  # viewpoint-independent
+    elif cy < 0.38:
+        # Upper vehicle structure above window line: roof
+        comp = "roof"
+    elif roof_boxes and cy < 0.52:
+        def rbox_gap(a, b) -> float:
+            ax1, ay1, ax2, ay2 = a
+            bx1, by1, bx2, by2 = b
+            dx = max(0.0, max(bx1 - ax2, ax1 - bx2))
+            dy = max(0.0, max(by1 - ay2, ay1 - by2))
+            return math.hypot(dx, dy)
+
+        max_dim = max(image_width, image_height)
+        if any(rbox_gap(det.bbox_xyxy, rbox) <= 0.20 * max_dim for rbox in roof_boxes):
+            comp = "roof"
+        else:
+            comp = "roof_pillar" if (cx < 0.35 or cx > 0.65) else "windshield"
     elif label == "bumper_smash":
-        comp = "front_bumper" if cy > 0.55 else "bumper"
-    elif cy < 0.22:
-        comp = "windshield" if 0.15 < cx < 0.85 and bw_rel > 0.4 else "roof_area"
+        # Bumper smash physically occurs on the lower front or rear bumper fascia
+        if cy >= 0.58:
+            comp = "front_bumper"
+        elif cy < 0.45:
+            comp = "roof" if (0.15 < cx < 0.85 and bw_rel < 0.45) else "hood"
+        else:
+            comp = "front_fender"
     elif cy < 0.50:
         if bw_rel > 0.45:
             comp = "hood"
         else:
             comp = "front_fender" if (cx < 0.25 or cx > 0.75) else "hood"
     elif cy < 0.68:
-        if 0.30 < cx < 0.72 and bw_rel > 0.25:
+        if roof_boxes:
+            comp = "windshield" if (0.25 < cx < 0.75) else "roof_pillar"
+        elif 0.30 < cx < 0.72 and bw_rel > 0.25:
             comp = "grille_fascia"
         elif cx < 0.30:
             comp = "front_fender"
@@ -143,11 +168,16 @@ def prioritize_detections(
         return []
 
     mirror_boxes = [d.bbox_xyxy for d in detections if d.label == "broken_mirror"]
+    roof_boxes = [
+        d.bbox_xyxy for d in detections
+        if (d.bbox_xyxy[1] + d.bbox_xyxy[3]) / 2.0 / max(1.0, image_height) < 0.38
+        and d.label in ("dent", "scratch", "structural_damage")
+    ]
 
     scored: List[Tuple[float, DetectionItem]] = []
     for det in detections:
         score = priority_score(det, image_width, image_height)
-        component = infer_component(det, image_width, image_height, rear_view, mirror_boxes)
+        component = infer_component(det, image_width, image_height, rear_view, mirror_boxes, roof_boxes)
         scored.append((score, det.model_copy(update={
             "component": component,
             "priority_score": score,

@@ -341,6 +341,8 @@ class VisionPipeline:
         Taillights have saturated red reflectors ((hue <= 8 | hue >= 172) & sat >= 80 & val >= 60).
         A genuine taillight cluster contains a concentrated red mass (>= 300 connected red pixels).
         Frontal collisions (which have negligible or zero red pixels) are never flagged as rear.
+        Predominantly red vehicles (where body panels are red) are never flagged as rear solely
+        from body paint.
         """
         try:
             import cv2
@@ -353,8 +355,19 @@ class VisionPipeline:
             if int(red.sum()) < 350:
                 return False
 
+            # If the vehicle itself is predominantly red, red color is vehicle paint,
+            # not an isolated taillight reflector
+            if float(red.mean()) > 0.15:
+                return False
+
+            # Taillights are located in the mid/lower vehicle zone, never at the top roof
+            hh = arr.shape[0]
+            roof_cutoff = int(hh * 0.35)
+            red_taillight_zone = red.copy()
+            red_taillight_zone[:roof_cutoff, :] = False
+
             # Check if there is a concentrated red cluster representing a taillight
-            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(red.astype(np.uint8))
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(red_taillight_zone.astype(np.uint8))
             for i in range(1, num_labels):
                 area = stats[i, cv2.CC_STAT_AREA]
                 if area >= 300:

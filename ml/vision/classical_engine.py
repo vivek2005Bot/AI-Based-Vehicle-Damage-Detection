@@ -362,11 +362,19 @@ class ClassicalDamageEngine:
             chan_maps[channel_name] = {"weak": weak, "a": amap}
             raw_cands.extend([(channel_name,) + c for c in cands])
 
+        # Check if the vehicle itself is predominantly red (prevents red paint from being mistaken for taillights)
+        h_deg = hsv[..., 0].astype(np.int32)
+        s_chan = hsv[..., 1].astype(np.int32)
+        v_chan = hsv[..., 2].astype(np.int32)
+        red_pix = ((h_deg <= 8) | (h_deg >= 172)) & (s_chan >= 70) & (v_chan >= 50)
+        is_red_vehicle = float(red_pix.mean()) > 0.12
+
         regions: List[DamageRegion] = []
         for channel_name, mask, x, y, w, h, area_frac in raw_cands:
             region = self._build_region(
                 channel_name, mask, (x, y, w, h), area_frac,
                 gray_u8, hsv, wh, ww, global_edge_share, chan_maps,
+                is_red_vehicle=is_red_vehicle,
             )
             if region is not None:
                 regions.append(region)
@@ -631,7 +639,8 @@ class ClassicalDamageEngine:
         return best
 
     def _build_region(self, channel, mask, bbox, area_frac, gray_u8, hsv,
-                      wh, ww, global_edge_share, chan_maps) -> Optional[DamageRegion]:
+                      wh, ww, global_edge_share, chan_maps,
+                      is_red_vehicle: bool = False) -> Optional[DamageRegion]:
         """Phase 2: tighten -> evidence -> gate (+cavity rescue) -> classify."""
         x, y, w, h = bbox
         frame_area = float(wh * ww)
@@ -693,6 +702,7 @@ class ClassicalDamageEngine:
             thin=thin,
             x_center_rel=x_center_rel,
             y_center_rel=y_center_rel,
+            is_red_vehicle=is_red_vehicle,
         )
         if label is None:
             return None
@@ -953,6 +963,9 @@ class ClassicalDamageEngine:
             return "edge_dominated"
         if abs(ev.d_sat) > SAT_DIFF_MAX:
             return "context_saturation_mismatch"
+        # Smooth pitch-black window / cabin interior shadow in dent channel is not sheet metal deformation
+        if channel == "dent" and ev.gray_mean < 25.0 and ev.gray_std < 12.0 and ev.edge_share < 0.22:
+            return "uniform_fill"
         # Hue is meaningless in deep shadow; dark exposed internals would be
         # wrongly rejected as "busy" because of noisy colorful reflections.
         if ev.gray_mean < DARK_HUE_SKIP_GRAY:
@@ -989,6 +1002,13 @@ class ClassicalDamageEngine:
             return False
         if not (MIRROR_MIN_AREA <= area_frac <= MIRROR_MAX_AREA):
             return False
+        # Side mirrors are never tall, thin vertical pillar or window-seam slivers
+        ys, xs = np.nonzero(mask)
+        if xs.size > 0:
+            bw = float(xs.max() - xs.min() + 1)
+            bh = float(ys.max() - ys.min() + 1)
+            if bh / max(1.0, bw) > 2.5 and bw <= 0.12 * gray_u8.shape[1]:
+                return False
         # Saturated red reflector is a taillight, never a side mirror
         if evidence is not None and evidence.red_frac >= 0.06:
             return False
@@ -1041,23 +1061,31 @@ class ClassicalDamageEngine:
         y_center_rel: float,
         cross_overlap: float,
         evidence=None,
+        is_red_vehicle: bool = False,
+        x_center_rel: Optional[float] = None,
     ) -> bool:
         """Shattered lamp (headlight/taillight): shards, torn lenses, voids.
 
-        Three measured paths (any one suffices), all gated to tiny edge-dense
-        low-saturation mid-height fragments:
-          * bright mean (classic intact-but-broken reflector),
-          * bright shards mixed into a darker fragment (bright fraction),
-          * dark lens void with colorful shard reflections (chroma spread),
-          * saturated red reflector (taillight).
+        Lamps are mounted on the front or rear fascia / corners; they are NEVER
+        located on the vehicle roof panel.
         """
-        # Red reflector -> always a taillight lamp
+        # Red reflector -> taillight lamp check.
+        # Saturated red is taillight evidence on non-red vehicles (on red cars,
+        # red is normal body paintwork, not a lamp reflector).
         if evidence is not None and evidence.red_frac >= 0.06:
-            return True
+            if not is_red_vehicle:
+                # Exclude upper central roof area on non-red cars
+                if not (y_center_rel < 0.30 and 0.25 <= (x_center_rel or 0.5) <= 0.75):
+                    return True
+
+        # Roof zone prevention: vehicle lamps never sit on the central roof panel
+        if y_center_rel < 0.36 and (x_center_rel is None or 0.15 <= x_center_rel <= 0.85):
+            return False
         if not (LAMP_Y_MIN_V2 <= y_center_rel <= LAMP_Y_MAX_V2):
             return False
         if not (LAMP_MIN_AREA_V2 <= area_frac <= LAMP_MAX_AREA_V2):
             return False
+
         # Shattered lens void / socket of a lamp assembly (moderate edge density inside cavity)
         if (
             mean_brightness < 60.0
@@ -1096,6 +1124,7 @@ class ClassicalDamageEngine:
         thin: Optional[bool] = None,
         x_center_rel: Optional[float] = None,
         y_center_rel: Optional[float] = None,
+        is_red_vehicle: bool = False,
     ) -> Optional[str]:
         """Map a measured region to a canonical damage class (geometry + evidence-based)."""
         x, y, w, h = bbox
@@ -1130,8 +1159,9 @@ class ClassicalDamageEngine:
             self._lamp_evidence(
                 gray_u8, mask, mean_brightness, edge_share, reg_s_med, gray_std,
                 area_frac, y_center_rel, cross_overlap, evidence,
+                is_red_vehicle=is_red_vehicle, x_center_rel=x_center_rel,
             )
-            and (mean_brightness < 80.0 or (evidence is not None and evidence.red_frac >= 0.06))
+            and (mean_brightness < 80.0 or (evidence is not None and not is_red_vehicle and evidence.red_frac >= 0.06))
         )
         is_glass_fracture = (
             not is_lamp_void
@@ -1139,6 +1169,7 @@ class ClassicalDamageEngine:
             and elongation <= 2.2
             and edge_share >= 0.50
             and gray_std >= 20.0
+            and (evidence is None or (evidence.reg_s_med <= 45.0 and (is_red_vehicle or evidence.red_frac < 0.15)))
         )
         is_corner_lamp = (x_center_rel <= 0.25 or x_center_rel >= 0.75) and y_center_rel >= 0.45
 
@@ -1158,16 +1189,20 @@ class ClassicalDamageEngine:
         if channel == "dent":
             if is_glass_fracture and not is_corner_lamp:
                 return "glass_crack"
-            # Structural lower-zone deformation -> bumper_smash. Thresholds are
-            # set for FRAGMENTED bumpers: a crushed bumper shatters into
-            # adjacent pieces, each below the old 0.06 minimum.
-            if area_frac >= BUMPER_SMASH_MIN_AREA_DENT and y_center_rel > BUMPER_SMASH_MIN_Y:
+            # Structural lower-zone deformation -> bumper_smash.
+            # Bumper requires lower fascia (y > 0.65) and structural texture (not smooth interior shadow).
+            if (
+                area_frac >= BUMPER_SMASH_MIN_AREA_DENT
+                and y_center_rel > 0.65
+                and (mean_brightness >= 25.0 or gray_std >= 14.0)
+            ):
                 return "bumper_smash"
-            # Shattered-lens fragments also surface in the dent channel (lens
+            # Shattered-lamp fragments also surface in the dent channel (lens
             # voids read as shading deformation). Lamp before mirror.
             if self._lamp_evidence(
                 gray_u8, mask, mean_brightness, edge_share, reg_s_med, gray_std,
                 area_frac, y_center_rel, cross_overlap, evidence,
+                is_red_vehicle=is_red_vehicle, x_center_rel=x_center_rel,
             ):
                 return "broken_light"
             # Torn mirror assembly (dark cavity + torn texture + corroboration).
@@ -1190,10 +1225,15 @@ class ClassicalDamageEngine:
             if is_glass_fracture and not is_corner_lamp:
                 return "glass_crack"
             # Structural lower-zone chaos -> bumper_smash (fragment-tolerant).
-            if area_frac >= BUMPER_SMASH_MIN_AREA_CHAOS and y_center_rel > BUMPER_SMASH_MIN_Y:
+            if (
+                area_frac >= BUMPER_SMASH_MIN_AREA_CHAOS
+                and y_center_rel > 0.65
+                and (mean_brightness >= 25.0 or gray_std >= 14.0)
+            ):
                 return "bumper_smash"
+
             # Small very bright region -> broken_light (headlight/taillight)
-            if mean_brightness >= 170.0 and area_frac < 0.08:
+            if mean_brightness >= 170.0 and area_frac < 0.08 and not is_red_vehicle:
                 return "broken_light"
             # Shattered-lamp rule: bright, edge-dense, mid-height fragments are
             # broken headlights even when small (front-collision regression).
@@ -1212,6 +1252,7 @@ class ClassicalDamageEngine:
             if self._lamp_evidence(
                 gray_u8, mask, mean_brightness, edge_share, reg_s_med, gray_std,
                 area_frac, y_center_rel, cross_overlap, evidence,
+                is_red_vehicle=is_red_vehicle, x_center_rel=x_center_rel,
             ):
                 return "broken_light"
             # Torn mirror assembly in the chaos channel.
@@ -1230,7 +1271,7 @@ class ClassicalDamageEngine:
             if 0.7 <= elongation <= 1.3 and y_center_rel > 0.75 and area_frac > 0.01:
                 return "flat_tire"
             # High edge share + low saturation in compact zone -> broken component
-            if edge_share > 0.5 and reg_s_med < 50 and elongation <= 2.2 and not thin:
+            if edge_share > 0.5 and reg_s_med < 50 and elongation <= 2.2 and not thin and not is_red_vehicle:
                 return "broken_light"
             return "dent"
 
@@ -1265,6 +1306,7 @@ class ClassicalDamageEngine:
             if self._lamp_evidence(
                 gray_u8, mask, mean_brightness, edge_share, reg_s_med, gray_std,
                 area_frac, y_center_rel, cross_overlap, evidence,
+                is_red_vehicle=is_red_vehicle, x_center_rel=x_center_rel,
             ):
                 return "broken_light"
             # Torn mirror splinters in the crack channel.
