@@ -1,0 +1,46 @@
+# CarDD Mask R-CNN training service (MMDetection 2.x generation, CUDA 11.0).
+# Runs ONLY on a Linux/NVIDIA host (Route C in the integration guide).
+# Never part of the main backend build (Mac/Python 3.14 incompatible).
+# Usage (Linux/NVIDIA host with data/CarDD_COCO/ + root COCO .pth present):
+#   docker build -f infra/cardd/Dockerfile.cardd -t cardd-train .
+#   docker run --gpus all -v $PWD/data/CarDD_COCO:/mmdetection/data/CarDD_COCO:ro \
+#     -v $PWD/work_dirs:/mmdetection/work_dirs cardd-train train
+#   docker run --gpus all -v $PWD/data/CarDD_COCO:/mmdetection/data/CarDD_COCO:ro \
+#     -v $PWD/work_dirs:/mmdetection/work_dirs cardd-train eval
+FROM nvidia/cuda:11.0.3-cudnn8-devel-ubuntu20.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    FORCE_CUDA=1
+
+WORKDIR /mmdetection
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.8 python3.8-dev python3-pip git ninja-build \
+    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 \
+    && python3 -m pip install --upgrade pip setuptools==59.5.0 wheel
+
+# Torch 1.7.0 + CUDA 11.0 era (matches official CarDD README).
+RUN pip install torch==1.7.0+cu110 torchvision==0.8.1+cu110 \
+    -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install mmcv-full==1.7.2 \
+    -f https://download.openmmlab.com/mmcv/dist/cu110/torch1.7/index.html
+
+# MMDetection 2.28.2 (last 2.x line CarDD was built against).
+RUN git clone https://github.com/open-mmlab/mmdetection.git . \
+    && git checkout v2.28.2 \
+    && pip install -r requirements/build.txt \
+    && pip install -v -e .
+
+# Portable project config (relative paths, 6 ordered classes, num_classes=6).
+COPY configs/cardd/mask_rcnn_r50_fpn_2x_cardd.py configs/cardd/
+COPY infra/cardd/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Data + checkpoints are mounted at run time, never baked into the image.
+VOLUME ["/mmdetection/data/CarDD_COCO", "/mmdetection/work_dirs", "/mmdetection/checkpoints"]
+
+ENTRYPOINT ["/entrypoint.sh"]

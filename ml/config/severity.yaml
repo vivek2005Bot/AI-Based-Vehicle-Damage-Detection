@@ -8,6 +8,9 @@ method: "relative_area_weighted_by_class"
 class_weights:
   bumper_smash: 0.35
   glass_crack: 0.25
+  glass_shatter: 0.25   # CarDD "glass shatter" — shattered glazing, same as glass_crack
+  crack: 0.10           # CarDD "crack" — body/paint crack, between scratch and dent
+  tire_flat: 0.20       # alias for flat_tire (raw CarDD outputs)
   flat_tire: 0.20
   broken_light: 0.15
   dent: 0.12

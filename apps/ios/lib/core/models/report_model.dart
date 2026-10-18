@@ -13,6 +13,9 @@ class DetectionModel {
   /// headlight, ...). Advisory heuristic, not trained part output.
   final String? component;
   final double? priorityScore;
+  /// Original model label before canonical mapping (e.g. CarDD
+  /// "glass shatter" -> label "glass_shatter"). Null for classical output.
+  final String? sourceLabel;
 
   DetectionModel({
     required this.instanceId,
@@ -26,6 +29,7 @@ class DetectionModel {
     this.priority = 'secondary',
     this.component,
     this.priorityScore,
+    this.sourceLabel,
   });
 
   factory DetectionModel.fromJson(Map<String, dynamic> json) {
@@ -53,6 +57,7 @@ class DetectionModel {
       priority: json['priority'] as String? ?? 'secondary',
       component: json['component'] as String?,
       priorityScore: (json['priority_score'] as num?)?.toDouble(),
+      sourceLabel: json['source_label'] as String?,
     );
   }
 }

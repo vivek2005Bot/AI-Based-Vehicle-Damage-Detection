@@ -53,8 +53,26 @@ data/processed/
 *.sqlite3
 *.db
 dataset/
+dataset_temp*/
+CarDD_release/
 
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Large ML assets and private datasets (CarDD integration — do not commit weights/data)
+checkpoints/
+models/pretrained/*.pth
+*.pth
+*.pth.tar
+*.pt
+CarDD_COCO/
+data/CarDD_COCO/
+data/CarDD_COCO
+CarDD_release/
+CarDD_SOD/
+work_dirs/
+data
+outputs/cardd_test/
+

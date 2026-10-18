@@ -18,6 +18,12 @@ source_datasets:
       description: "Intact vehicle with no visible structural or surface damage"
 
   cardd_dataset:
+    # NOTE (CarDD Mask R-CNN integration): the live adapter in
+    # ml/vision/cardd_detector.py preserves CarDD "crack" -> "crack" and
+    # "glass shatter" -> "glass_shatter" as EXPLICIT labels (source_label
+    # stamped, rules.py untouched so no silent risk escalation). The
+    # glass_crack merges below describe the legacy dataset-import mapping,
+    # not the detector output contract. See CARDD_TO_CANONICAL + severity.yaml.
     scratch:
       canonical: "scratch"
       action: "direct"

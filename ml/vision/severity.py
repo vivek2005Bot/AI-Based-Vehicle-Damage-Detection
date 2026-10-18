@@ -18,6 +18,14 @@ from ml.vision.schemas import DamageSeverityLevel, DetectionItem, SeverityAssess
 DEFAULT_CLASS_WEIGHTS: Dict[str, float] = {
     "bumper_smash": 0.35,
     "glass_crack": 0.25,
+    # CarDD labels (explicit, reviewed — no silent fallback):
+    # glass_shatter (CarDD "glass shatter") == shattered glazing, same safety
+    # relevance as glass_crack. crack (CarDD "crack") == body/paint crack,
+    # cosmetic-to-moderate: between scratch and dent. flat_tire canonical is
+    # "flat_tire"; "tire_flat" kept as alias for raw CarDD outputs.
+    "glass_shatter": 0.25,
+    "crack": 0.10,
+    "tire_flat": 0.20,
     "broken_mirror": 0.22,
     "flat_tire": 0.20,
     "broken_light": 0.15,

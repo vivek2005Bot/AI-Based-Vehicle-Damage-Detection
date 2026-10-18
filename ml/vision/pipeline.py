@@ -12,11 +12,15 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import time
 import uuid
 from pathlib import Path
 from typing import List, Optional, Union
+from dotenv import load_dotenv
 from PIL import Image
+
+load_dotenv()
 
 from ml.vision.classifier import Stage2DamageClassifier
 from ml.vision.detector import Stage3DamageDetector
@@ -26,6 +30,7 @@ from ml.vision.schemas import (
     AssessmentStatus,
     ClassificationItem,
     DamageSeverityLevel,
+    DetectionItem,
     ImageFinding,
     SeverityAssessment,
     StageStatus,
@@ -44,6 +49,7 @@ class VisionPipeline:
         self,
         filter_threshold: float = 0.85,
         target_size: tuple[int, int] = (1024, 1024),
+        cardd_detector=None,
     ):
         from ml.vision.classical_engine import ClassicalDamageEngine
 
@@ -56,6 +62,44 @@ class VisionPipeline:
         self.stage2_classifier = Stage2DamageClassifier(engine=self._engine)
         self.stage3_detector = Stage3DamageDetector(engine=self._engine)
         self.stage4_segmenter = Stage4DamageSegmenter()
+        # Optional CarDD Mask R-CNN (disabled by default). Injected or lazily
+        # built from env; when unavailable the classical path runs unchanged.
+        self._cardd_detector = cardd_detector
+        self._cardd_init_attempted = cardd_detector is not None
+
+    @property
+    def cardd_detector(self):
+        """Lazily build the optional CarDD adapter from env (once)."""
+        if self._cardd_detector is None and not self._cardd_init_attempted:
+            self._cardd_init_attempted = True
+            try:
+                backend = os.getenv("CARDD_MODEL_BACKEND", "").lower()
+                if backend == "yolo" or os.getenv("CARDD_YOLO_ENABLED", "").lower() in ("1", "true", "yes"):
+                    from ml.vision.yolo_cardd_detector import YoloCarddDetector
+
+                    self._cardd_detector = YoloCarddDetector()
+                else:
+                    from ml.vision.cardd_detector import (
+                        CarddDetectorConfig,
+                        CarddDamageDetector,
+                    )
+
+                    self._cardd_detector = CarddDamageDetector(CarddDetectorConfig.from_env())
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning("CarDD adapter init failed; classical fallback: %s", exc)
+                self._cardd_detector = None
+        return self._cardd_detector
+
+    def cardd_status(self) -> dict:
+        """Report whether the optional deep model is enabled/available."""
+        det = self.cardd_detector
+        if det is None:
+            return {"enabled": False, "available": False,
+                    "reason": "CarDD detector disabled (default classical path)."}
+        try:
+            return det.status_dict()
+        except Exception as exc:  # pragma: no cover - defensive
+            return {"enabled": False, "available": False, "reason": str(exc)}
 
 
     def process_image(
@@ -87,9 +131,57 @@ class VisionPipeline:
         _, transforms = letterbox_resize(image, target_size=self.target_size)
         latencies["preprocessing"] = round((time.perf_counter() - t0) * 1000.0, 2)
 
+        # 1b. Optional CarDD probe (disabled by default): run BEFORE the
+        # classical early-exit so deep-model evidence is available on every
+        # path. It never overrides classical verdicts by itself — it only
+        # contributes detections that are merged downstream (step 4b). Any
+        # failure/unavailability is recorded as a warning with classical
+        # fallback; a deep-only signal reaching no localization resolves to
+        # INCONCLUSIVE (manual review), never auto-DAMAGED, never NO_DAMAGE.
+        cardd_dicts: list = []
+        cardd_warning: Optional[str] = None
+        cardd_model_name: Optional[str] = None
+        try:
+            cardd = self.cardd_detector
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("CarDD status check failed; classical fallback: %s", exc)
+            cardd = None
+        if cardd is not None and getattr(cardd, "is_available", False):
+            try:
+                cardd_dicts, cardd_model_name, cardd_latency = cardd.predict_detections(
+                    image,
+                    image_width=transforms.original_width,
+                    image_height=transforms.original_height,
+                )
+                latencies["cardd_detection"] = cardd_latency
+            except Exception as exc:
+                cardd_warning = (
+                    "CarDD deep detector failed at inference; "
+                    f"classical result retained ({exc})."
+                )
+                logger.warning("%s", cardd_warning)
+                cardd_dicts = []
+        elif cardd is not None and getattr(cardd, "status", None) is not None and getattr(
+            cardd.status, "enabled", False
+        ):
+            try:
+                cardd_warning = f"CarDD unavailable; classical result retained ({cardd.status.reason})."
+            except Exception:  # pragma: no cover - defensive
+                cardd_warning = "CarDD unavailable; classical result retained."
+            latencies["cardd_detection"] = 0.0
+
         # 2. Stage 1: Damaged vs. Undamaged Filter
         is_damaged, prob, s1_status, s1_latency = self.stage1_filter.predict(image)
         latencies["stage1_filter"] = s1_latency
+
+        # If the deep detector detected damage instances, override the classical filter's
+        # potential false negative so valid damages are not discarded prematurely.
+        if cardd_dicts:
+            is_damaged = True
+            max_conf = max(float(d.get("confidence", 0.0)) for d in cardd_dicts)
+            prob = max(prob, max_conf)
+            if s1_status != StageStatus.COMPLETED:
+                s1_status = StageStatus.COMPLETED
 
         stage_status = {
             "filter": s1_status,
@@ -143,6 +235,11 @@ class VisionPipeline:
                     relative_damage_ratio=0.0,
                 )
 
+            early_warnings: list[str] = []
+            if cardd_warning:
+                early_warnings.append(cardd_warning)
+            if assessment != AssessmentStatus.NO_DAMAGE:
+                early_warnings.append(reason)
             return ImageFinding(
                 image_id=img_id,
                 filename=filename,
@@ -152,12 +249,13 @@ class VisionPipeline:
                 damage_probability=prob,
                 filter_threshold=self.stage1_filter.threshold,
                 filter_model=self.stage1_filter.model_name,
+                detector_model=cardd_model_name or self.stage3_detector.architecture,
                 classifications=[],
                 detections=[],
                 severity=sev,
                 stage_status=stage_status,
                 transforms=transforms,
-                warnings=[] if assessment == AssessmentStatus.NO_DAMAGE else [reason],
+                warnings=early_warnings,
                 latency_ms=latencies,
             )
 
@@ -179,6 +277,22 @@ class VisionPipeline:
             s3_status = StageStatus.COMPLETED
         stage_status["detection"] = s3_status
         latencies["stage3_detection"] = s3_latency
+        warnings: list[str] = []
+
+        # 4b. Optional CarDD Mask R-CNN fusion (disabled by default).
+        # Merge the step-1b probe detections with classical ones (cross-class
+        # NMS dedupes the same physical damage). The probe already ran, so
+        # this block is pure merge — no second inference, no new failures.
+        if cardd_dicts:
+            from ml.vision.detector import nms_cross_class
+
+            cardd_items = [DetectionItem(**d) for d in cardd_dicts]
+            raw_detections = nms_cross_class(
+                [*(raw_detections or []), *cardd_items]
+            )
+        if cardd_warning:
+            warnings.append(cardd_warning)
+            latencies["cardd_detection"] = latencies.get("cardd_detection", 0.0)
 
         # No localizations -> distinguish valid negative vs inconclusive.
         if not raw_detections:
@@ -227,6 +341,11 @@ class VisionPipeline:
                     vehicle_pixel_area=float(transforms.original_width * transforms.original_height),
                     relative_damage_ratio=0.0,
                 )
+            no_loc_warnings: list[str] = []
+            if cardd_warning:
+                no_loc_warnings.append(cardd_warning)
+            if assessment != AssessmentStatus.NO_DAMAGE:
+                no_loc_warnings.append(reason)
             return ImageFinding(
                 image_id=img_id,
                 filename=filename,
@@ -236,12 +355,13 @@ class VisionPipeline:
                 damage_probability=prob,
                 filter_threshold=self.stage1_filter.threshold,
                 filter_model=self.stage1_filter.model_name,
+                detector_model=cardd_model_name or self.stage3_detector.architecture,
                 classifications=[],
                 detections=[],
                 severity=sev,
                 stage_status=stage_status,
                 transforms=transforms,
-                warnings=[] if assessment == AssessmentStatus.NO_DAMAGE else [reason],
+                warnings=no_loc_warnings,
                 latency_ms=latencies,
             )
 
@@ -297,17 +417,27 @@ class VisionPipeline:
             # detection list), not by raw confidence, so chips/report lead
             # with the primary damage class.
             best_by_label: dict[str, float] = {}
+            best_source_label: dict[str, str | None] = {}
             label_order: list[str] = []
             for det in segmented_detections:
                 if det.label not in best_by_label:
                     label_order.append(det.label)
                     best_by_label[det.label] = det.confidence
+                    best_source_label[det.label] = det.source_label
                 elif det.confidence > best_by_label[det.label]:
                     best_by_label[det.label] = det.confidence
+                    best_source_label[det.label] = det.source_label
             classes = [
-                ClassificationItem(label=label, confidence=round(best_by_label[label], 4))
+                ClassificationItem(
+                    label=label,
+                    confidence=round(best_by_label[label], 4),
+                    source_label=best_source_label.get(label),
+                )
                 for label in label_order
             ]
+        # Surface which detector produced the boxes (classical default unless
+        # CarDD fused) for downstream audit; schema field is optional.
+        detector_model = cardd_model_name or self.stage3_detector.architecture
         return ImageFinding(
             image_id=img_id,
             filename=filename,
@@ -317,6 +447,7 @@ class VisionPipeline:
             damage_probability=prob,
             filter_threshold=self.stage1_filter.threshold,
             filter_model=self.stage1_filter.model_name,
+            detector_model=detector_model,
             classifications=classes if has_damage else [],
             detections=segmented_detections,
             severity=severity if has_damage else SeverityAssessment(
@@ -330,7 +461,7 @@ class VisionPipeline:
             ),
             stage_status=stage_status,
             transforms=transforms,
-            warnings=img_warnings,
+            warnings=[*img_warnings, *([cardd_warning] if cardd_warning else [])],
             latency_ms=latencies,
         )
 
@@ -504,6 +635,14 @@ class VisionPipeline:
 
         total_latency = (time.perf_counter() - start_time) * 1000.0
 
+        try:
+            cardd_info = self.cardd_status()
+        except Exception:  # pragma: no cover - defensive
+            cardd_info = {"enabled": False, "available": False}
+        cardd_used = any(
+            (f.detector_model or "").startswith("cardd_") for f in findings
+        )
+
         if any_damage:
             overall_assessment = AssessmentStatus.DAMAGED
             overall_reason = None
@@ -547,6 +686,9 @@ class VisionPipeline:
             compute_saved_by_early_filter=any_early_filter_skip,
             total_latency_ms=round(total_latency, 2),
             pipeline_version="1.0.0",
+            cardd_enabled=bool(cardd_info.get("enabled", False)),
+            cardd_available=bool(cardd_info.get("available", False)),
+            cardd_model=cardd_info.get("model", "cardd_mask_rcnn_r50_fpn_2x") if cardd_used else None,
             warnings=list(
                 dict.fromkeys(
                     [

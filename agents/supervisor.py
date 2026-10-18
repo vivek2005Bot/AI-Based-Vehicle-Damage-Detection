@@ -235,6 +235,9 @@ class InspectionSupervisor:
                 "detector_model": "classical_cv_v1",
                 "segmenter_model": "classical_cv_contour_v1",
                 "obd_model": "isolation_forest",
+                "cardd_enabled": bool(getattr(state.vision_result, "cardd_enabled", False)),
+                "cardd_available": bool(getattr(state.vision_result, "cardd_available", False)),
+                "cardd_model": getattr(state.vision_result, "cardd_model", None),
             },
             "processing": {
                 "total_duration_ms": total_duration_ms,

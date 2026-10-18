@@ -17,3 +17,11 @@ apps/ios
 private_uploads
 reports/generated
 ml/artifacts
+# CarDD dataset/weights never enter the build context (mount at run time)
+CarDD_release
+CarDD_SOD
+data
+checkpoints
+work_dirs
+*.pth
+*.json.bak

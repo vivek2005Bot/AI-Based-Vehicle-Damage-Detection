@@ -27,10 +27,15 @@ class _ImageOverlayViewerState extends State<ImageOverlayViewer> {
       case 'bumper_smash':
         return Colors.redAccent;
       case 'glass_crack':
+      case 'glass_shatter':
         return Colors.purpleAccent;
+      case 'crack':
+        return Colors.lightBlueAccent;
       case 'flat_tire':
+      case 'tire_flat':
         return Colors.deepOrangeAccent;
       case 'broken_light':
+      case 'lamp_broken':
         return Colors.amber;
       case 'broken_mirror':
         return Colors.orangeAccent;
@@ -306,7 +311,7 @@ class _ImageOverlayViewerState extends State<ImageOverlayViewer> {
                   final color = _getClassColor(det.label);
                   final isPrimary = det.priority == 'primary';
                   final comp = (det.component ?? '').replaceAll('_', ' ');
-                  final labelText = StringBuffer(det.label.toUpperCase())
+                  final labelText = StringBuffer(_displayLabel(det).toUpperCase())
                     ..write(' (${(det.confidence * 100).toInt()}%)')
                     ..write(isPrimary ? ' · PRIMARY' : '')
                     ..write(comp.isNotEmpty ? ' · $comp' : '');
@@ -336,6 +341,14 @@ class _ImageOverlayViewerState extends State<ImageOverlayViewer> {
       ),
     );
   }
+}
+
+/// Display label: prefer the original model label when present so CarDD
+/// outputs read as "glass shatter" rather than the mapped "glass_shatter".
+String _displayLabel(DetectionModel det) {
+  final src = det.sourceLabel;
+  if (src != null && src.isNotEmpty) return src;
+  return det.label;
 }
 
 class _DamageOverlayPainter extends CustomPainter {
@@ -417,8 +430,8 @@ class _DamageOverlayPainter extends CustomPainter {
 
         // Label Tag (primary finding marked; same backend order as chips)
         final tagText = det.priority == 'primary'
-            ? ' ★ ${det.label} ${(det.confidence * 100).toInt()}% '
-            : ' ${det.label} ${(det.confidence * 100).toInt()}% ';
+            ? ' ★ ${_displayLabel(det)} ${(det.confidence * 100).toInt()}% '
+            : ' ${_displayLabel(det)} ${(det.confidence * 100).toInt()}% ';
         final tp = TextPainter(
           text: TextSpan(
             text: tagText,

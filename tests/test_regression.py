@@ -25,6 +25,13 @@ from ml.vision.schemas import AssessmentStatus
 REPO_ROOT = __file__.rsplit("/tests/", 1)[0]
 
 
+@pytest.fixture(autouse=True)
+def disable_cardd_for_classical_regression(monkeypatch):
+    monkeypatch.setenv("CARDD_YOLO_ENABLED", "false")
+    monkeypatch.setenv("CARDD_MODEL_ENABLED", "false")
+    monkeypatch.setenv("CARDD_MODEL_BACKEND", "disabled")
+
+
 def _matches(det_box, gt_box) -> bool:
     """Class-agnostic match: IoU >= 0.20 or center inside GT."""
     if _iou(det_box, gt_box) >= 0.20:

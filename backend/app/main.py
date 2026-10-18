@@ -105,6 +105,12 @@ async def health_ready():
 @app.get("/api/v1/meta", tags=["Metadata"])
 async def get_system_metadata():
     """System capability metadata."""
+    try:
+        from ml.vision.pipeline import VisionPipeline
+
+        cardd = VisionPipeline().cardd_status()
+    except Exception as exc:  # pragma: no cover - defensive
+        cardd = {"enabled": False, "available": False, "reason": str(exc)}
     return {
         "project": settings.PROJECT_NAME,
         "version": "1.0.0",
@@ -115,13 +121,21 @@ async def get_system_metadata():
             "langgraph_multi_agent": True,
             "rag_knowledge_retrieval": settings.RAG_ENABLED,
             "pdf_report_generation": True,
+            "cardd_detector_enabled": bool(cardd.get("enabled", False)),
+            "cardd_detector_available": bool(cardd.get("available", False)),
         },
         "models": {
-            "filter": "efficientnet_b4",
-            "classifier": "convnext_tiny",
-            "detector": "yolov8x",
-            "segmenter": "mask_rcnn",
+            "filter": "classical_cv_v1",
+            "classifier": "classical_cv_v1",
+            "detector": "classical_cv_v1",
+            "segmenter": "classical_cv_contour_v1",
             "obd_detector": "isolation_forest",
+            "cardd_detector": {
+                "model": "cardd_mask_rcnn_r50_fpn_2x",
+                "enabled": bool(cardd.get("enabled", False)),
+                "available": bool(cardd.get("available", False)),
+                "reason": cardd.get("reason"),
+            },
         },
     }
 

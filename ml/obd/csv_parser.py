@@ -111,11 +111,16 @@ def parse_obd_csv(
     unmapped_cols: List[str] = []
     units: Dict[str, str] = {}
     healthy_ranges: Dict[str, List[float]] = {}
+    seen_canonical: set[str] = set()
 
     for idx, col in enumerate(header):
         match = match_canonical_pid(col)
         if match:
             canonical_name, unit, h_range = match
+            if canonical_name in seen_canonical:
+                unmapped_cols.append(col)
+                continue
+            seen_canonical.add(canonical_name)
             col_mapping[idx] = (canonical_name, unit, h_range)
             units[canonical_name] = unit
             healthy_ranges[canonical_name] = h_range

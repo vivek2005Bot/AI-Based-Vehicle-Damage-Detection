@@ -56,6 +56,15 @@ stage3_detector:
       confidence_threshold: 0.35
       iou_threshold: 0.45
       status: "active"
+    cardd_mask_rcnn_r50_fpn_2x:
+      architecture: "Mask R-CNN ResNet-50-FPN (CarDD 6-class, MMDetection 2.x)"
+      input_size: [1024, 1024]
+      classes: ["dent", "scratch", "crack", "glass shatter", "lamp broken", "tire flat"]
+      score_threshold: 0.50
+      config: "./configs/cardd/mask_rcnn_r50_fpn_2x_cardd.py"
+      checkpoint: "work_dirs/cardd_mask_rcnn_r50_fpn_2x/<fine-tuned>.pth (unverified — COCO init weights only at present)"
+      status: "disabled_pending_finetuned_checkpoint"
+      enable_via: ["CARDD_MODEL_ENABLED=true", "CARDD_MODEL_CONFIG", "CARDD_MODEL_CHECKPOINT"]
     yolov8x:
       architecture: "YOLOv8x"
       input_size: [1024, 1024]

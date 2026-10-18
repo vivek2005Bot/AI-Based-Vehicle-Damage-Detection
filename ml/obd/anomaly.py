@@ -46,7 +46,10 @@ class OBDAnomalyDetector:
             return False, 0.0, []
 
         features = telemetry.feature_names
-        matrix = np.column_stack([telemetry.canonical_data[f] for f in features])
+        min_len = min(len(telemetry.canonical_data[f]) for f in features)
+        if min_len < 5:
+            return False, 0.0, []
+        matrix = np.column_stack([np.array(telemetry.canonical_data[f][:min_len], dtype=float) for f in features])
 
         # Replace any remaining NaNs or Infs with column mean
         col_means = np.nanmean(matrix, axis=0)

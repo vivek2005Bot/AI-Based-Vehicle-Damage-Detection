@@ -71,6 +71,9 @@ class DetectionItem(BaseModel):
     mask: Optional[List[List[float]]] = Field(default=None, description="Polygon contour points [[x, y], ...]")
     mask_pixel_area: Optional[float] = Field(default=None, ge=0.0)
     relative_area: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    # Original model label before canonical mapping (e.g. CarDD "glass shatter").
+    # Optional so older payloads still parse; CarDD adapter always stamps it.
+    source_label: Optional[str] = Field(default=None)
     # Prioritization + component (major-collision fix). Optional so older
     # payloads still parse; pipeline always stamps them on new findings.
     # priority: "primary" (most prominent validated damage) | "secondary".
@@ -111,6 +114,7 @@ class ImageFinding(BaseModel):
     damage_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     filter_threshold: float = 0.85
     filter_model: str = "efficientnet_b4"
+    detector_model: Optional[str] = Field(default=None, description="Stage-3 detector identity (classical default unless CarDD fused)")
     classifications: List[ClassificationItem] = Field(default_factory=list)
     detections: List[DetectionItem] = Field(default_factory=list)
     severity: SeverityAssessment = Field(default_factory=SeverityAssessment)
@@ -139,3 +143,7 @@ class VisionPipelineResult(BaseModel):
     total_latency_ms: float = 0.0
     pipeline_version: str = "1.0.0"
     warnings: List[str] = Field(default_factory=list)
+    # Optional CarDD provenance (surfaced when the deep detector contributed).
+    cardd_enabled: bool = False
+    cardd_available: bool = False
+    cardd_model: Optional[str] = None
