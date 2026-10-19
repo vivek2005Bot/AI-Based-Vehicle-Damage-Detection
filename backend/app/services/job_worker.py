@@ -23,7 +23,7 @@ from agents.state import InspectionGraphState, VehicleMetadata
 from agents.supervisor import InspectionSupervisor
 from backend.app.core.config import settings
 from backend.app.db.session import AsyncSessionLocal
-from backend.app.models_db.models import AnalysisJob, Inspection, InspectionFile, InspectionReport
+from backend.app.models_db.models import AnalysisJob, Inspection, InspectionFile, InspectionReport, VehicleRepairEstimate
 from backend.app.services.file_storage import file_storage
 from reports.pdf_renderer import render_inspection_pdf
 
@@ -148,6 +148,41 @@ async def execute_inspection_job(job_id: str, inspection_id: str) -> None:
                     pdf_storage_path=pdf_rel_path,
                 )
                 db.add(db_report)
+
+            # Persist Repair Cost Estimate if generated
+            est_dict = report_data.get("estimate")
+            if est_dict:
+                existing_est_stmt = select(VehicleRepairEstimate).where(VehicleRepairEstimate.inspection_id == inspection.id)
+                existing_est = (await db.execute(existing_est_stmt)).scalar_one_or_none()
+                dmg_info = est_dict.get("damage") or {}
+                rep_scen = est_dict.get("repair_scenario") or {}
+                rep_exp = rep_scen.get("expected", 0.0)
+                repl_scen = est_dict.get("replacement_scenario") or {}
+                repl_exp = repl_scen.get("expected", 0.0)
+                rec_scen = "repair" if rep_scen.get("is_recommended") else "replacement"
+
+                if existing_est:
+                    existing_est.component_id = dmg_info.get("component_id", "unknown")
+                    existing_est.damage_type = dmg_info.get("damage_type", "unknown")
+                    existing_est.extent_category = dmg_info.get("extent_category", "unknown")
+                    existing_est.recommended_scenario = rec_scen
+                    existing_est.repair_expected = rep_exp
+                    existing_est.replace_expected = repl_exp
+                    existing_est.currency = est_dict.get("vehicle", {}).get("currency", "INR")
+                    existing_est.estimate_json = json.dumps(est_dict)
+                else:
+                    db_est = VehicleRepairEstimate(
+                        inspection_id=inspection.id,
+                        component_id=dmg_info.get("component_id", "unknown"),
+                        damage_type=dmg_info.get("damage_type", "unknown"),
+                        extent_category=dmg_info.get("extent_category", "unknown"),
+                        recommended_scenario=rec_scen,
+                        repair_expected=rep_exp,
+                        replace_expected=repl_exp,
+                        currency=est_dict.get("vehicle", {}).get("currency", "INR"),
+                        estimate_json=json.dumps(est_dict),
+                    )
+                    db.add(db_est)
 
             inspection.status = processed_state.status
             job.status = "completed"

@@ -10,14 +10,16 @@ from __future__ import annotations
 
 import csv
 import io
+import math
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ml.obd.dtc import extract_dtcs_from_text
+from ml.obd.pid_definitions import PID_REGISTRY
 from ml.obd.schemas import DTCEntry, OBDDataQuality
 
-# Canonical PID mapping patterns (regex pattern -> canonical name, unit, healthy range)
+# Canonical PID mapping patterns for backward compatibility
 PID_ALIASES = [
     (re.compile(r"coolant.*temp|engine.*temp", re.I), "ENGINE_COOLANT_TEMP", "°C", [75.0, 105.0]),
     (re.compile(r"engine.*rpm|rpm", re.I), "ENGINE_RPM", "RPM", [600.0, 6500.0]),
@@ -33,7 +35,16 @@ PID_ALIASES = [
 
 
 def match_canonical_pid(column_header: str) -> Optional[Tuple[str, str, List[float]]]:
-    """Map raw column name to canonical PID, unit, and healthy reference range."""
+    """Map raw column name to canonical PID, unit, and configured monitoring range.
+
+    Leverages PID_REGISTRY to preserve bank and sensor context when present.
+    """
+    matched = PID_REGISTRY.match_column(column_header)
+    if matched:
+        name, config = matched
+        return name, config.unit, list(config.configured_range)
+
+    # Fallback to PID_ALIASES
     clean = column_header.strip()
     for pattern, canonical_name, unit, healthy_range in PID_ALIASES:
         if pattern.search(clean):
@@ -52,6 +63,8 @@ class ParsedOBDTelemetry:
         quality: OBDDataQuality,
         units: Dict[str, str],
         healthy_ranges: Dict[str, List[float]],
+        raw_column_mapping: Optional[Dict[str, str]] = None,
+        valid_masks: Optional[Dict[str, List[bool]]] = None,
     ):
         self.canonical_data = canonical_data
         self.raw_columns = raw_columns
@@ -59,6 +72,8 @@ class ParsedOBDTelemetry:
         self.quality = quality
         self.units = units
         self.healthy_ranges = healthy_ranges
+        self.raw_column_mapping = raw_column_mapping or {k: k for k in canonical_data}
+        self.valid_masks = valid_masks or {k: [True] * len(v) for k, v in canonical_data.items()}
 
     @property
     def row_count(self) -> int:
@@ -107,10 +122,12 @@ def parse_obd_csv(
     detected_dtcs = extract_dtcs_from_text(text)
 
     # Map column headers
-    col_mapping: Dict[int, Tuple[str, str, List[float]]] = {}
+    # Map column headers: col_idx -> (canonical_name, unit, h_range, raw_col_header)
+    col_mapping: Dict[int, Tuple[str, str, List[float], str]] = {}
     unmapped_cols: List[str] = []
     units: Dict[str, str] = {}
     healthy_ranges: Dict[str, List[float]] = {}
+    raw_column_mapping: Dict[str, str] = {}
     seen_canonical: set[str] = set()
 
     for idx, col in enumerate(header):
@@ -121,16 +138,18 @@ def parse_obd_csv(
                 unmapped_cols.append(col)
                 continue
             seen_canonical.add(canonical_name)
-            col_mapping[idx] = (canonical_name, unit, h_range)
+            col_mapping[idx] = (canonical_name, unit, h_range, col)
             units[canonical_name] = unit
             healthy_ranges[canonical_name] = h_range
+            raw_column_mapping[canonical_name] = col
         else:
             unmapped_cols.append(col)
 
     if not col_mapping:
         warnings.append("No standard automotive PIDs could be recognized from CSV headers.")
 
-    canonical_series: Dict[str, List[float]] = {name: [] for name, _, _ in col_mapping.values()}
+    canonical_series: Dict[str, List[float]] = {name: [] for name, _, _, _ in col_mapping.values()}
+    valid_masks: Dict[str, List[bool]] = {name: [] for name, _, _, _ in col_mapping.values()}
     total_cells = 0
     missing_cells = 0
     duplicate_rows = 0
@@ -147,22 +166,27 @@ def parse_obd_csv(
             duplicate_rows += 1
         prev_row_tuple = current_tuple
 
-        for col_idx, (canonical_name, _, _) in col_mapping.items():
+        for col_idx, (canonical_name, _, _, _) in col_mapping.items():
             total_cells += 1
             if col_idx < len(row):
                 raw_val = row[col_idx].strip()
                 try:
                     num_val = float(raw_val)
+                    if math.isnan(num_val) or math.isinf(num_val):
+                        raise ValueError("Non-finite numeric telemetry reading")
                     canonical_series[canonical_name].append(num_val)
+                    valid_masks[canonical_name].append(True)
                 except ValueError:
-                    # Impute using last known value or 0.0
+                    # Impute using last known value or 0.0 for isolation forest matrix alignment
                     missing_cells += 1
                     last_val = canonical_series[canonical_name][-1] if canonical_series[canonical_name] else 0.0
                     canonical_series[canonical_name].append(last_val)
+                    valid_masks[canonical_name].append(False)
             else:
                 missing_cells += 1
                 last_val = canonical_series[canonical_name][-1] if canonical_series[canonical_name] else 0.0
                 canonical_series[canonical_name].append(last_val)
+                valid_masks[canonical_name].append(False)
 
     missing_pct = round((missing_cells / max(1, total_cells)) * 100.0, 2)
 
@@ -184,5 +208,7 @@ def parse_obd_csv(
         quality=quality,
         units=units,
         healthy_ranges=healthy_ranges,
+        raw_column_mapping=raw_column_mapping,
+        valid_masks=valid_masks,
     )
     return parsed, warnings

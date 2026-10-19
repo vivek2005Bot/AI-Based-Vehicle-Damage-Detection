@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/inspection_model.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../progress/analysis_progress_screen.dart';
 import '../report/report_screen.dart';
 
@@ -93,9 +94,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inspection History'),
+        title: Text(l10n?.inspectionHistory ?? 'Inspection History'),
       ),
       body: SafeArea(
         child: Column(
@@ -108,7 +111,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Search by vehicle make, model, or ID...',
+                      hintText: l10n?.searchHint ?? 'Search by vehicle make, model, or ID...',
                       prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
@@ -123,13 +126,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _buildFilterChip('all', 'All Inspections'),
+                        _buildFilterChip('all', l10n?.allInspectionsFilter ?? 'All Inspections'),
                         const SizedBox(width: 8),
-                        _buildFilterChip('safe', 'Safe'),
+                        _buildFilterChip('safe', l10n?.statusSafe ?? 'Safe'),
                         const SizedBox(width: 8),
-                        _buildFilterChip('caution', 'Caution'),
+                        _buildFilterChip('caution', l10n?.statusCaution ?? 'Caution'),
                         const SizedBox(width: 8),
-                        _buildFilterChip('unsafe', 'Unsafe'),
+                        _buildFilterChip('unsafe', l10n?.statusUnsafe ?? 'Unsafe'),
                       ],
                     ),
                   ),
@@ -153,7 +156,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 const SizedBox(height: 12),
                                 Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.textMuted)),
                                 const SizedBox(height: 16),
-                                ElevatedButton(onPressed: _fetchInspections, child: const Text('Retry')),
+                                ElevatedButton(
+                                  onPressed: _fetchInspections,
+                                  child: Text(l10n?.retry ?? 'Retry'),
+                                ),
                               ],
                             ),
                           ),
@@ -165,7 +171,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 children: [
                                   Icon(Icons.search_off_rounded, size: 52, color: AppTheme.textMuted.withValues(alpha: 0.4)),
                                   const SizedBox(height: 12),
-                                  const Text('No matching inspections found', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.primaryDark)),
+                                  Text(
+                                    l10n?.noMatchingInspections ?? 'No matching inspections found',
+                                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.primaryDark),
+                                  ),
                                 ],
                               ),
                             )
@@ -177,7 +186,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                                 itemBuilder: (context, index) {
                                   final item = _filteredInspections[index];
-                                  return _buildItemCard(item);
+                                  return _buildItemCard(item, l10n);
                                 },
                               ),
                             ),
@@ -206,7 +215,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildItemCard(InspectionModel item) {
+  Widget _buildItemCard(InspectionModel item, AppLocalizations? l10n) {
     Color badgeColor = Colors.grey;
     String badgeText = item.status.toUpperCase();
 
@@ -214,17 +223,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final rc = item.riskClass!.toLowerCase();
       if (rc == 'safe') {
         badgeColor = AppTheme.safeGreen;
-        badgeText = 'SAFE';
+        badgeText = l10n?.statusSafe ?? 'SAFE';
       } else if (rc == 'caution') {
         badgeColor = AppTheme.cautionAmber;
-        badgeText = 'CAUTION';
+        badgeText = l10n?.statusCaution ?? 'CAUTION';
       } else if (rc == 'unsafe') {
         badgeColor = AppTheme.unsafeRed;
-        badgeText = 'UNSAFE';
+        badgeText = l10n?.statusUnsafe ?? 'UNSAFE';
       }
     } else if (item.status == 'queued' || item.status == 'processing') {
       badgeColor = AppTheme.accentCyan;
-      badgeText = 'PROCESSING';
+      badgeText = l10n?.statusProcessing ?? 'PROCESSING';
     }
 
     return Card(

@@ -1,0 +1,767 @@
+{
+  "@@locale": "en",
+  "appTitle": "Vehicle Damage AI",
+  "@appTitle": {
+    "description": "Localization key for appTitle"
+  },
+  "signIn": "Sign In",
+  "@signIn": {
+    "description": "Localization key for signIn"
+  },
+  "createAccount": "Create Account",
+  "@createAccount": {
+    "description": "Localization key for createAccount"
+  },
+  "welcomeBack": "Welcome Back",
+  "@welcomeBack": {
+    "description": "Localization key for welcomeBack"
+  },
+  "loginSubtitle": "Sign in to capture inspections, upload telemetry, and generate grounded safety reports.",
+  "@loginSubtitle": {
+    "description": "Localization key for loginSubtitle"
+  },
+  "registerSubtitle": "Register an inspector account to start vehicle roadworthiness assessments.",
+  "@registerSubtitle": {
+    "description": "Localization key for registerSubtitle"
+  },
+  "emailLabel": "Email Address",
+  "@emailLabel": {
+    "description": "Localization key for emailLabel"
+  },
+  "emailHint": "inspector@example.com",
+  "@emailHint": {
+    "description": "Localization key for emailHint"
+  },
+  "passwordLabel": "Password",
+  "@passwordLabel": {
+    "description": "Localization key for passwordLabel"
+  },
+  "passwordHint": "••••••••••••",
+  "@passwordHint": {
+    "description": "Localization key for passwordHint"
+  },
+  "confirmPasswordLabel": "Confirm Password",
+  "@confirmPasswordLabel": {
+    "description": "Localization key for confirmPasswordLabel"
+  },
+  "confirmPasswordHint": "••••••••••••",
+  "@confirmPasswordHint": {
+    "description": "Localization key for confirmPasswordHint"
+  },
+  "signInButton": "Sign In",
+  "@signInButton": {
+    "description": "Localization key for signInButton"
+  },
+  "registerButton": "Create Inspector Account",
+  "@registerButton": {
+    "description": "Localization key for registerButton"
+  },
+  "needAccount": "Need an account? Register here",
+  "@needAccount": {
+    "description": "Localization key for needAccount"
+  },
+  "alreadyHaveAccount": "Already have an account? Sign In",
+  "@alreadyHaveAccount": {
+    "description": "Localization key for alreadyHaveAccount"
+  },
+  "forgotPassword": "Forgot Password?",
+  "@forgotPassword": {
+    "description": "Localization key for forgotPassword"
+  },
+  "onboardingTitle": "Vehicle Damage & Telemetry AI",
+  "@onboardingTitle": {
+    "description": "Localization key for onboardingTitle"
+  },
+  "onboardingDesc": "Capture vehicle photos and OBD-II telemetry for AI-assisted damage detection and roadworthiness assessment.",
+  "@onboardingDesc": {
+    "description": "Localization key for onboardingDesc"
+  },
+  "getStarted": "Get Started",
+  "@getStarted": {
+    "description": "Localization key for getStarted"
+  },
+  "skip": "Skip",
+  "@skip": {
+    "description": "Localization key for skip"
+  },
+  "permissionsInstruction": "Camera and storage permissions are required to capture vehicle photos and upload telemetry logs.",
+  "@permissionsInstruction": {
+    "description": "Localization key for permissionsInstruction"
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Localization key for home"
+  },
+  "dashboard": "Dashboard",
+  "@dashboard": {
+    "description": "Localization key for dashboard"
+  },
+  "startInspection": "Start Inspection",
+  "@startInspection": {
+    "description": "Localization key for startInspection"
+  },
+  "inspectionHistory": "Inspection History",
+  "@inspectionHistory": {
+    "description": "Localization key for inspectionHistory"
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Localization key for profile"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Localization key for settings"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Localization key for save"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Localization key for cancel"
+  },
+  "back": "Back",
+  "@back": {
+    "description": "Localization key for back"
+  },
+  "next": "Next",
+  "@next": {
+    "description": "Localization key for next"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Localization key for retry"
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Localization key for search"
+  },
+  "searchHint": "Search by make, model, VIN...",
+  "@searchHint": {
+    "description": "Localization key for searchHint"
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Localization key for loading"
+  },
+  "emptyInspections": "No inspections found.",
+  "@emptyInspections": {
+    "description": "Localization key for emptyInspections"
+  },
+  "success": "Success",
+  "@success": {
+    "description": "Localization key for success"
+  },
+  "error": "Error",
+  "@error": {
+    "description": "Localization key for error"
+  },
+  "confirm": "Confirm",
+  "@confirm": {
+    "description": "Localization key for confirm"
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Localization key for close"
+  },
+  "selectLanguage": "Language",
+  "@selectLanguage": {
+    "description": "Localization key for selectLanguage"
+  },
+  "serverSettings": "Server Settings",
+  "@serverSettings": {
+    "description": "Localization key for serverSettings"
+  },
+  "backendUrl": "Backend API Base URL",
+  "@backendUrl": {
+    "description": "Localization key for backendUrl"
+  },
+  "updateUrl": "Update URL",
+  "@updateUrl": {
+    "description": "Localization key for updateUrl"
+  },
+  "urlUpdated": "Backend URL updated successfully",
+  "@urlUpdated": {
+    "description": "Localization key for urlUpdated"
+  },
+  "logOut": "Log Out",
+  "@logOut": {
+    "description": "Localization key for logOut"
+  },
+  "logOutConfirmTitle": "Log Out",
+  "@logOutConfirmTitle": {
+    "description": "Localization key for logOutConfirmTitle"
+  },
+  "logOutConfirmMessage": "Are you sure you want to log out of this device? Local authentication tokens will be removed.",
+  "@logOutConfirmMessage": {
+    "description": "Localization key for logOutConfirmMessage"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Localization key for delete"
+  },
+  "newInspectionTitle": "New Inspection",
+  "@newInspectionTitle": {
+    "description": "Localization key for newInspectionTitle"
+  },
+  "vehicleDetails": "Vehicle Details",
+  "@vehicleDetails": {
+    "description": "Localization key for vehicleDetails"
+  },
+  "vehicleMake": "Make",
+  "@vehicleMake": {
+    "description": "Localization key for vehicleMake"
+  },
+  "vehicleModel": "Model",
+  "@vehicleModel": {
+    "description": "Localization key for vehicleModel"
+  },
+  "vehicleYear": "Year",
+  "@vehicleYear": {
+    "description": "Localization key for vehicleYear"
+  },
+  "vehicleMileage": "Mileage (km / mi)",
+  "@vehicleMileage": {
+    "description": "Localization key for vehicleMileage"
+  },
+  "vehicleVin": "VIN (Optional)",
+  "@vehicleVin": {
+    "description": "Localization key for vehicleVin"
+  },
+  "step1Details": "1. Details",
+  "@step1Details": {
+    "description": "Localization key for step1Details"
+  },
+  "step2Photos": "2. Photos",
+  "@step2Photos": {
+    "description": "Localization key for step2Photos"
+  },
+  "step3Telemetry": "3. Telemetry",
+  "@step3Telemetry": {
+    "description": "Localization key for step3Telemetry"
+  },
+  "capturePhotos": "Vehicle Photos",
+  "@capturePhotos": {
+    "description": "Localization key for capturePhotos"
+  },
+  "takePhoto": "Take Photo",
+  "@takePhoto": {
+    "description": "Localization key for takePhoto"
+  },
+  "chooseGallery": "Choose from Gallery",
+  "@chooseGallery": {
+    "description": "Localization key for chooseGallery"
+  },
+  "noPhotosSelected": "No vehicle photos selected yet.",
+  "@noPhotosSelected": {
+    "description": "Localization key for noPhotosSelected"
+  },
+  "uploadTelemetry": "OBD-II Telemetry Log",
+  "@uploadTelemetry": {
+    "description": "Localization key for uploadTelemetry"
+  },
+  "chooseCsv": "Select CSV File",
+  "@chooseCsv": {
+    "description": "Localization key for chooseCsv"
+  },
+  "telemetryOptionalNote": "Optional: Attach OBD-II telemetry CSV for powertrain and sensor diagnostics.",
+  "@telemetryOptionalNote": {
+    "description": "Localization key for telemetryOptionalNote"
+  },
+  "submitInspection": "Start AI Assessment",
+  "@submitInspection": {
+    "description": "Localization key for submitInspection"
+  },
+  "submittingInspection": "Submitting inspection...",
+  "@submittingInspection": {
+    "description": "Localization key for submittingInspection"
+  },
+  "analysisProgressTitle": "Analysis in Progress",
+  "@analysisProgressTitle": {
+    "description": "Localization key for analysisProgressTitle"
+  },
+  "processingStageVision": "Detecting exterior vehicle damage with Mask R-CNN...",
+  "@processingStageVision": {
+    "description": "Localization key for processingStageVision"
+  },
+  "processingStageObd": "Analyzing telemetry PIDs with Isolation Forest...",
+  "@processingStageObd": {
+    "description": "Localization key for processingStageObd"
+  },
+  "processingStageRag": "Retrieving grounded repair & safety standards...",
+  "@processingStageRag": {
+    "description": "Localization key for processingStageRag"
+  },
+  "processingStageRules": "Evaluating deterministic roadworthiness rules...",
+  "@processingStageRules": {
+    "description": "Localization key for processingStageRules"
+  },
+  "analysisCompleted": "Analysis Complete!",
+  "@analysisCompleted": {
+    "description": "Localization key for analysisCompleted"
+  },
+  "viewReport": "View Inspection Report",
+  "@viewReport": {
+    "description": "Localization key for viewReport"
+  },
+  "obdTelemetryTitle": "OBD-II Telemetry & Diagnostic Codes",
+  "@obdTelemetryTitle": {
+    "description": "Localization key for obdTelemetryTitle"
+  },
+  "telemetryAnalyzed": "Telemetry Analyzed (Isolation Forest)",
+  "@telemetryAnalyzed": {
+    "description": "Localization key for telemetryAnalyzed"
+  },
+  "noTelemetryProvided": "No OBD-II telemetry log provided with this inspection.",
+  "@noTelemetryProvided": {
+    "description": "Localization key for noTelemetryProvided"
+  },
+  "anomalyDetected": "Anomaly Flagged",
+  "@anomalyDetected": {
+    "description": "Localization key for anomalyDetected"
+  },
+  "flaggedSensors": "Flagged Telemetry Sensors",
+  "@flaggedSensors": {
+    "description": "Localization key for flaggedSensors"
+  },
+  "activeDtcs": "Active DTC Codes",
+  "@activeDtcs": {
+    "description": "Localization key for activeDtcs"
+  },
+  "yes": "YES",
+  "@yes": {
+    "description": "Localization key for yes"
+  },
+  "no": "NO",
+  "@no": {
+    "description": "Localization key for no"
+  },
+  "diagnosticTroubleCodes": "Diagnostic Trouble Code Explanations",
+  "@diagnosticTroubleCodes": {
+    "description": "Localization key for diagnosticTroubleCodes"
+  },
+  "urgency": "Urgency",
+  "@urgency": {
+    "description": "Localization key for urgency"
+  },
+  "whatItMeans": "What it means",
+  "@whatItMeans": {
+    "description": "Localization key for whatItMeans"
+  },
+  "whatWeFound": "What we found",
+  "@whatWeFound": {
+    "description": "Localization key for whatWeFound"
+  },
+  "whatDoesThisMean": "What does this number mean?",
+  "@whatDoesThisMean": {
+    "description": "Localization key for whatDoesThisMean"
+  },
+  "howOften": "How often did this happen?",
+  "@howOften": {
+    "description": "Localization key for howOften"
+  },
+  "whatShouldYouDo": "What should you do?",
+  "@whatShouldYouDo": {
+    "description": "Localization key for whatShouldYouDo"
+  },
+  "symptomsAndCauses": "Symptoms, Causes & Technical Details",
+  "@symptomsAndCauses": {
+    "description": "Localization key for symptomsAndCauses"
+  },
+  "possibleCauses": "Possible Causes",
+  "@possibleCauses": {
+    "description": "Localization key for possibleCauses"
+  },
+  "possibleSymptoms": "Possible Symptoms",
+  "@possibleSymptoms": {
+    "description": "Localization key for possibleSymptoms"
+  },
+  "technicalDetails": "Technical Details",
+  "@technicalDetails": {
+    "description": "Localization key for technicalDetails"
+  },
+  "limitations": "Important Limitations",
+  "@limitations": {
+    "description": "Localization key for limitations"
+  },
+  "sourceReference": "Source Reference",
+  "@sourceReference": {
+    "description": "Localization key for sourceReference"
+  },
+  "diagnosticNotice": "Diagnostic Notice",
+  "@diagnosticNotice": {
+    "description": "Localization key for diagnosticNotice"
+  },
+  "outsideMonitoringRange": "Outside Monitoring Range",
+  "@outsideMonitoringRange": {
+    "description": "Localization key for outsideMonitoringRange"
+  },
+  "reading": "Reading",
+  "@reading": {
+    "description": "Localization key for reading"
+  },
+  "verifiedGuidance": "Verified Repair & Safety Guidance",
+  "@verifiedGuidance": {
+    "description": "Localization key for verifiedGuidance"
+  },
+  "canIKeepDriving": "Can I keep driving?",
+  "@canIKeepDriving": {
+    "description": "Localization key for canIKeepDriving"
+  },
+  "mechanicCheck": "What a mechanic should check",
+  "@mechanicCheck": {
+    "description": "Localization key for mechanicCheck"
+  },
+  "whyThisMatters": "Why this matters",
+  "@whyThisMatters": {
+    "description": "Localization key for whyThisMatters"
+  },
+  "roadworthinessStatus": "Roadworthiness Assessment",
+  "@roadworthinessStatus": {
+    "description": "Localization key for roadworthinessStatus"
+  },
+  "safeStatus": "SAFE",
+  "@safeStatus": {
+    "description": "Localization key for safeStatus"
+  },
+  "cautionStatus": "CAUTION",
+  "@cautionStatus": {
+    "description": "Localization key for cautionStatus"
+  },
+  "unsafeStatus": "UNSAFE",
+  "@unsafeStatus": {
+    "description": "Localization key for unsafeStatus"
+  },
+  "unavailableStatus": "UNAVAILABLE",
+  "@unavailableStatus": {
+    "description": "Localization key for unavailableStatus"
+  },
+  "safeDescription": "No critical safety defects detected. Vehicle appears safe for normal operation.",
+  "@safeDescription": {
+    "description": "Localization key for safeDescription"
+  },
+  "cautionDescription": "Advisory items or non-critical anomalies detected. Professional inspection advised.",
+  "@cautionDescription": {
+    "description": "Localization key for cautionDescription"
+  },
+  "unsafeDescription": "Critical hazards detected. Driving not recommended until professionally repaired.",
+  "@unsafeDescription": {
+    "description": "Localization key for unsafeDescription"
+  },
+  "downloadPdf": "Download PDF Report",
+  "@downloadPdf": {
+    "description": "Localization key for downloadPdf"
+  },
+  "downloadingPdf": "Downloading PDF report...",
+  "@downloadingPdf": {
+    "description": "Localization key for downloadingPdf"
+  },
+  "pdfSaved": "PDF Report saved successfully",
+  "@pdfSaved": {
+    "description": "Localization key for pdfSaved"
+  },
+  "failedDownloadPdf": "Failed to download PDF report",
+  "@failedDownloadPdf": {
+    "description": "Localization key for failedDownloadPdf"
+  },
+  "shareReport": "Share Report",
+  "@shareReport": {
+    "description": "Localization key for shareReport"
+  },
+  "damageClassScratch": "Scratch",
+  "@damageClassScratch": {
+    "description": "Localization key for damageClassScratch"
+  },
+  "damageClassDent": "Dent",
+  "@damageClassDent": {
+    "description": "Localization key for damageClassDent"
+  },
+  "damageClassBumperSmash": "Bumper Damage",
+  "@damageClassBumperSmash": {
+    "description": "Localization key for damageClassBumperSmash"
+  },
+  "damageClassGlassCrack": "Glass / Windshield Crack",
+  "@damageClassGlassCrack": {
+    "description": "Localization key for damageClassGlassCrack"
+  },
+  "damageClassBrokenLight": "Broken Light",
+  "@damageClassBrokenLight": {
+    "description": "Localization key for damageClassBrokenLight"
+  },
+  "damageClassFlatTire": "Flat / Deflated Tire",
+  "@damageClassFlatTire": {
+    "description": "Localization key for damageClassFlatTire"
+  },
+  "damageClassPanelCrush": "Crushed Panel / Structural Damage",
+  "@damageClassPanelCrush": {
+    "description": "Localization key for damageClassPanelCrush"
+  },
+  "damageSeverityLow": "Low Severity",
+  "@damageSeverityLow": {
+    "description": "Localization key for damageSeverityLow"
+  },
+  "damageSeverityMedium": "Medium Severity",
+  "@damageSeverityMedium": {
+    "description": "Localization key for damageSeverityMedium"
+  },
+  "damageSeverityHigh": "High Severity",
+  "@damageSeverityHigh": {
+    "description": "Localization key for damageSeverityHigh"
+  },
+  "pleaseEnterEmailAndPassword": "Please enter both email and password.",
+  "@pleaseEnterEmailAndPassword": {
+    "description": "Localization key for pleaseEnterEmailAndPassword"
+  },
+  "errorOccurred": "An error occurred. Please try again.",
+  "@errorOccurred": {
+    "description": "Localization key for errorOccurred"
+  },
+  "recentInspections": "Recent Inspections",
+  "@recentInspections": {
+    "description": "Localization key for recentInspections"
+  },
+  "allInspections": "All Inspections",
+  "@allInspections": {
+    "description": "Localization key for allInspections"
+  },
+  "historyTitle": "Inspection History",
+  "@historyTitle": {
+    "description": "Localization key for historyTitle"
+  },
+  "settingsTitle": "Settings & Compliance",
+  "@settingsTitle": {
+    "description": "Localization key for settingsTitle"
+  },
+  "reportTitle": "Inspection Report",
+  "@reportTitle": {
+    "description": "Localization key for reportTitle"
+  },
+  "vehicleOdometer": "Odometer",
+  "@vehicleOdometer": {
+    "description": "Localization key for vehicleOdometer"
+  },
+  "emailRequired": "Please enter both email and password.",
+  "@emailRequired": {
+    "description": "Localization key for emailRequired"
+  },
+  "signOut": "Sign Out",
+  "@signOut": {
+    "description": "Localization key for signOut"
+  },
+  "signOutSubtitle": "End current session and clear local security tokens",
+  "@signOutSubtitle": {
+    "description": "Localization key for signOutSubtitle"
+  },
+  "logoutConfirmation": "Are you sure you want to log out of this device? Local authentication tokens will be removed.",
+  "@logoutConfirmation": {
+    "description": "Localization key for logoutConfirmation"
+  },
+  "settingsAndCompliance": "Settings & Compliance",
+  "@settingsAndCompliance": {
+    "description": "Localization key for settingsAndCompliance"
+  },
+  "languageSectionHeader": "APPLICATION LANGUAGE / भाषा",
+  "@languageSectionHeader": {
+    "description": "Localization key for languageSectionHeader"
+  },
+  "languageSettingSubtitle": "Select from English or any of the 22 Scheduled Languages of India. Updates the entire application immediately.",
+  "@languageSettingSubtitle": {
+    "description": "Localization key for languageSettingSubtitle"
+  },
+  "backendConnection": "BACKEND CONNECTION",
+  "@backendConnection": {
+    "description": "Localization key for backendConnection"
+  },
+  "apiServerUrl": "API Server Base URL",
+  "@apiServerUrl": {
+    "description": "Localization key for apiServerUrl"
+  },
+  "apiServerUrlSubtitle": "Configure host for local development (e.g., http://localhost:8000 or your LAN IP)",
+  "@apiServerUrlSubtitle": {
+    "description": "Localization key for apiServerUrlSubtitle"
+  },
+  "saveEndpoint": "Save Endpoint",
+  "@saveEndpoint": {
+    "description": "Localization key for saveEndpoint"
+  },
+  "backendUrlUpdated": "Backend URL updated successfully",
+  "@backendUrlUpdated": {
+    "description": "Localization key for backendUrlUpdated"
+  },
+  "sessionManagement": "SESSION MANAGEMENT",
+  "@sessionManagement": {
+    "description": "Localization key for sessionManagement"
+  },
+  "stepVehicle": "Vehicle",
+  "@stepVehicle": {
+    "description": "Localization key for stepVehicle"
+  },
+  "stepPhotos": "Photos",
+  "@stepPhotos": {
+    "description": "Localization key for stepPhotos"
+  },
+  "stepObd": "OBD-II",
+  "@stepObd": {
+    "description": "Localization key for stepObd"
+  },
+  "stepReview": "Review",
+  "@stepReview": {
+    "description": "Localization key for stepReview"
+  },
+  "submitAndAnalyze": "Submit for Analysis",
+  "@submitAndAnalyze": {
+    "description": "Localization key for submitAndAnalyze"
+  },
+  "newInspection": "New Vehicle Inspection",
+  "@newInspection": {
+    "description": "Localization key for newInspection"
+  },
+  "startNewInspection": "Start New Inspection",
+  "@startNewInspection": {
+    "description": "Localization key for startNewInspection"
+  },
+  "aiInspectionCapabilities": "AI Inspection Capabilities",
+  "@aiInspectionCapabilities": {
+    "description": "Localization key for aiInspectionCapabilities"
+  },
+  "stage1Filter": "Stage 1 Filter",
+  "@stage1Filter": {
+    "description": "Localization key for stage1Filter"
+  },
+  "objectDetection": "Object Detection",
+  "@objectDetection": {
+    "description": "Localization key for objectDetection"
+  },
+  "obdAnomaly": "OBD Anomaly",
+  "@obdAnomaly": {
+    "description": "Localization key for obdAnomaly"
+  },
+  "ragStandards": "RAG Standards",
+  "@ragStandards": {
+    "description": "Localization key for ragStandards"
+  },
+  "viewAll": "View All",
+  "@viewAll": {
+    "description": "Localization key for viewAll"
+  },
+  "noInspectionsYet": "No inspections yet",
+  "@noInspectionsYet": {
+    "description": "Localization key for noInspectionsYet"
+  },
+  "noInspectionsSubtitle": "Tap \"Start New Inspection\" above to photograph a vehicle and run the AI assessment.",
+  "@noInspectionsSubtitle": {
+    "description": "Localization key for noInspectionsSubtitle"
+  },
+  "statusSafe": "SAFE",
+  "@statusSafe": {
+    "description": "Localization key for statusSafe"
+  },
+  "statusCaution": "CAUTION",
+  "@statusCaution": {
+    "description": "Localization key for statusCaution"
+  },
+  "statusUnsafe": "UNSAFE",
+  "@statusUnsafe": {
+    "description": "Localization key for statusUnsafe"
+  },
+  "statusReviewNeeded": "REVIEW NEEDED",
+  "@statusReviewNeeded": {
+    "description": "Localization key for statusReviewNeeded"
+  },
+  "statusProcessing": "PROCESSING",
+  "@statusProcessing": {
+    "description": "Localization key for statusProcessing"
+  },
+  "allInspectionsFilter": "All Inspections",
+  "@allInspectionsFilter": {
+    "description": "Localization key for allInspectionsFilter"
+  },
+  "noMatchingInspections": "No matching inspections found",
+  "@noMatchingInspections": {
+    "description": "Localization key for noMatchingInspections"
+  },
+  "processingInspection": "Processing Inspection",
+  "@processingInspection": {
+    "description": "Localization key for processingInspection"
+  },
+  "pipelineRunning": "AI Multi-Agent Pipeline Running",
+  "@pipelineRunning": {
+    "description": "Localization key for pipelineRunning"
+  },
+  "pipelineSubtitle": "Our LangGraph supervisor is coordinating specialist agents across vision, telemetry, and safety standards.",
+  "@pipelineSubtitle": {
+    "description": "Localization key for pipelineSubtitle"
+  },
+  "pipelineFailed": "Analysis pipeline failed on server. Please check inputs and retry.",
+  "@pipelineFailed": {
+    "description": "Localization key for pipelineFailed"
+  },
+  "backToHome": "Back to Home",
+  "@backToHome": {
+    "description": "Localization key for backToHome"
+  },
+  "stageValidation": "Input Validation & Preprocessing",
+  "@stageValidation": {
+    "description": "Localization key for stageValidation"
+  },
+  "stageVision": "4-Stage Vision Cascade (Filter, Detect, Segment)",
+  "@stageVision": {
+    "description": "Localization key for stageVision"
+  },
+  "stageObd": "OBD-II Telemetry & DTC Anomaly Detection",
+  "@stageObd": {
+    "description": "Localization key for stageObd"
+  },
+  "stageRAG": "RAG Knowledge Standards Retrieval",
+  "@stageRAG": {
+    "description": "Localization key for stageRAG"
+  },
+  "stageReport": "Risk Engine & Report Generation",
+  "@stageReport": {
+    "description": "Localization key for stageReport"
+  },
+  "inspectionFindingsReport": "Inspection Findings & Report",
+  "@inspectionFindingsReport": {
+    "description": "Localization key for inspectionFindingsReport"
+  },
+  "exportInspectionReport": "Export Inspection Report",
+  "@exportInspectionReport": {
+    "description": "Localization key for exportInspectionReport"
+  },
+  "downloadPdfReport": "Download & Share PDF Report",
+  "@downloadPdfReport": {
+    "description": "Localization key for downloadPdfReport"
+  },
+  "downloadPdfSubtitle": "Printable document with findings, charts, and citations",
+  "@downloadPdfSubtitle": {
+    "description": "Localization key for downloadPdfSubtitle"
+  },
+  "exportJsonData": "Export JSON Data Payload",
+  "@exportJsonData": {
+    "description": "Localization key for exportJsonData"
+  },
+  "exportJsonSubtitle": "Machine-readable telemetry & computer vision coordinates",
+  "@exportJsonSubtitle": {
+    "description": "Localization key for exportJsonSubtitle"
+  },
+  "retryLoadingReport": "Retry Loading Report",
+  "@retryLoadingReport": {
+    "description": "Localization key for retryLoadingReport"
+  },
+  "exteriorVisualFindings": "Exterior Visual Findings",
+  "@exteriorVisualFindings": {
+    "description": "Localization key for exteriorVisualFindings"
+  },
+  "noImagesProcessed": "No images were processed.",
+  "@noImagesProcessed": {
+    "description": "Localization key for noImagesProcessed"
+  },
+  "obdTelemetryFindings": "OBD-II Telemetry & DTC Findings",
+  "@obdTelemetryFindings": {
+    "description": "Localization key for obdTelemetryFindings"
+  },
+  "groundedSafetyGuidance": "Grounded Safety & Repair Guidance",
+  "@groundedSafetyGuidance": {
+    "description": "Localization key for groundedSafetyGuidance"
+  }
+}

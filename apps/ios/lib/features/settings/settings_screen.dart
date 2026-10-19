@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/config/api_config.dart';
+import '../../core/localization/language_selector_widget.dart';
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../auth/login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -26,15 +28,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _saveBaseUrl() async {
+  Future<void> _saveBaseUrl(AppLocalizations? l10n) async {
     setState(() => _isSaving = true);
     final url = _urlController.text.trim();
     if (url.isNotEmpty) {
       await ApiConfig.setBaseUrl(url);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Backend URL updated successfully'),
+          SnackBar(
+            content: Text(l10n?.backendUrlUpdated ?? 'Backend URL updated successfully'),
             backgroundColor: AppTheme.safeGreen,
           ),
         );
@@ -43,21 +45,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isSaving = false);
   }
 
-  Future<void> _handleLogout() async {
+  Future<void> _handleLogout(AppLocalizations? l10n) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out of this device? Local authentication tokens will be removed.'),
+        title: Text(l10n?.signOut ?? 'Log Out'),
+        content: Text(l10n?.logoutConfirmation ?? 'Are you sure you want to log out of this device? Local authentication tokens will be removed.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n?.cancel ?? 'Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.unsafeRed),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+            child: Text(l10n?.signOut ?? 'Log Out', style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -76,17 +78,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings & Compliance'),
+        title: Text(l10n?.settingsAndCompliance ?? 'Settings & Compliance'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Section: Backend Configuration
-          const Text(
-            'BACKEND CONNECTION',
-            style: TextStyle(
+          // Section: Language & Locale
+          Text(
+            l10n?.languageSectionHeader ?? 'APPLICATION LANGUAGE / भाषा',
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.1,
@@ -101,14 +105,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'API Server Base URL',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  Row(
+                    children: [
+                      const Icon(Icons.translate, color: AppTheme.primaryCobalt, size: 22),
+                      const SizedBox(width: 10),
+                      Text(
+                        l10n?.selectLanguage ?? 'Preferred Language',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Configure host for local development (e.g., http://localhost:8000 or your LAN IP)',
-                    style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                  Text(
+                    l10n?.languageSettingSubtitle ??
+                        'Select from English or any of the 22 Scheduled Languages of India. Updates the entire application immediately.',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                  ),
+                  const SizedBox(height: 12),
+                  const LanguageSelectorWidget(),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Section: Backend Configuration
+          Text(
+            l10n?.backendConnection ?? 'BACKEND CONNECTION',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.1,
+              color: AppTheme.textMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n?.apiServerUrl ?? 'API Server Base URL',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n?.apiServerUrlSubtitle ?? 'Configure host for local development (e.g., http://localhost:8000 or your LAN IP)',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -123,11 +170,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: ElevatedButton.icon(
-                      onPressed: _isSaving ? null : _saveBaseUrl,
+                      onPressed: _isSaving ? null : () => _saveBaseUrl(l10n),
                       icon: _isSaving
                           ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.save_rounded, size: 18),
-                      label: const Text('Save Endpoint'),
+                      label: Text(l10n?.saveEndpoint ?? 'Save Endpoint'),
                     ),
                   ),
                 ],
@@ -229,9 +276,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // Section: Account Actions
-          const Text(
-            'SESSION MANAGEMENT',
-            style: TextStyle(
+          Text(
+            l10n?.sessionManagement ?? 'SESSION MANAGEMENT',
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.1,
@@ -243,9 +290,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: ListTile(
               leading: const Icon(Icons.logout_rounded, color: AppTheme.unsafeRed),
-              title: const Text('Sign Out', style: TextStyle(color: AppTheme.unsafeRed, fontWeight: FontWeight.bold)),
-              subtitle: const Text('End current session and clear local security tokens'),
-              onTap: _handleLogout,
+              title: Text(l10n?.signOut ?? 'Sign Out', style: const TextStyle(color: AppTheme.unsafeRed, fontWeight: FontWeight.bold)),
+              subtitle: Text(l10n?.signOutSubtitle ?? 'End current session and clear local security tokens'),
+              onTap: () => _handleLogout(l10n),
             ),
           ),
           const SizedBox(height: 40),

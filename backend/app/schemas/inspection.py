@@ -65,3 +65,15 @@ class InspectionStatusResponse(BaseModel):
     warnings: List[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
+
+
+class EstimateUpdateRequest(BaseModel):
+    component_id: Optional[str] = None
+    damage_type: Optional[str] = None
+    extent_category: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    city: Optional[str] = "Delhi NCR"
+    oem_preference: Optional[str] = "oem"
+    refresh_pricing: bool = False

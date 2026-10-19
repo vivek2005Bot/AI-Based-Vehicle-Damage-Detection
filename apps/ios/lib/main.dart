@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'core/config/api_config.dart';
+import 'core/localization/locale_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/splash/splash_screen.dart';
+import 'l10n/generated/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,8 +21,9 @@ void main() async {
     ),
   );
 
-  // Initialize secure storage / API settings
+  // Initialize secure storage, API settings, and language preference
   await ApiConfig.initialize();
+  await LocaleService.initialize();
 
   runApp(const VehicleDamageInspectionApp());
 }
@@ -28,11 +33,34 @@ class VehicleDamageInspectionApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Vehicle Damage AI',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const SplashScreen(),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: LocaleService.currentLocaleNotifier,
+      builder: (context, locale, child) {
+        return MaterialApp(
+          title: 'Vehicle Damage AI',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            FallbackMaterialLocalizationsDelegate(),
+            FallbackCupertinoLocalizationsDelegate(),
+          ],
+          localeResolutionCallback: (deviceLocale, supportedLocales) {
+            for (final supported in supportedLocales) {
+              if (supported.languageCode == locale.languageCode) {
+                return supported;
+              }
+            }
+            return const Locale('en');
+          },
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }

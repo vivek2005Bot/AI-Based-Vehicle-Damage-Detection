@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/config/api_config.dart';
+import '../../core/localization/language_selector_widget.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../home/home_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -26,12 +28,12 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(AppLocalizations? l10n) async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter both email and password.');
+      setState(() => _errorMessage = l10n?.emailRequired ?? 'Please enter both email and password.');
       return;
     }
 
@@ -62,14 +64,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(_isRegisterMode ? 'Create Account' : 'Sign In'),
+        title: Text(_isRegisterMode ? (l10n?.createAccount ?? 'Create Account') : (l10n?.signIn ?? 'Sign In')),
         actions: [
+          const LanguageSelectorWidget(compact: true),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Server Settings',
+            tooltip: l10n?.settings ?? 'Server Settings',
             onPressed: () {
               Navigator.push(
                 context,
@@ -85,9 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
               Text(
-                _isRegisterMode ? 'Register Inspector Account' : 'Welcome Back',
+                _isRegisterMode
+                    ? (l10n?.createAccount ?? 'Register Inspector Account')
+                    : (l10n?.welcomeBack ?? 'Welcome Back'),
                 style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -96,11 +102,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Sign in to capture inspections, upload telemetry, and generate grounded safety reports.',
-                style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
+              Text(
+                _isRegisterMode
+                    ? (l10n?.registerSubtitle ?? 'Register an inspector account to start vehicle roadworthiness assessments.')
+                    : (l10n?.loginSubtitle ?? 'Sign in to capture inspections, upload telemetry, and generate grounded safety reports.'),
+                style: const TextStyle(fontSize: 14, color: AppTheme.textMuted),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               if (_errorMessage != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -128,30 +136,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
-                decoration: const InputDecoration(
-                  labelText: 'Email Address',
-                  prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
+                decoration: InputDecoration(
+                  labelText: l10n?.emailLabel ?? 'Email Address',
+                  hintText: l10n?.emailHint ?? 'inspector@example.com',
+                  prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textMuted),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted),
+                decoration: InputDecoration(
+                  labelText: l10n?.passwordLabel ?? 'Password',
+                  hintText: l10n?.passwordHint ?? '••••••••••••',
+                  prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textMuted),
                 ),
               ),
               const SizedBox(height: 28),
               ElevatedButton(
-                onPressed: _isLoading ? null : _submit,
+                onPressed: _isLoading ? null : () => _submit(l10n),
                 child: _isLoading
                     ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
-                    : Text(_isRegisterMode ? 'Register' : 'Sign In'),
+                    : Text(_isRegisterMode ? (l10n?.createAccount ?? 'Register') : (l10n?.signInButton ?? 'Sign In')),
               ),
               const SizedBox(height: 16),
               TextButton(
@@ -163,8 +173,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
                 child: Text(
                   _isRegisterMode
-                      ? 'Already have an account? Sign In'
-                      : 'Don\'t have an account? Create One',
+                      ? (l10n?.alreadyHaveAccount ?? 'Already have an account? Sign In')
+                      : (l10n?.needAccount ?? 'Don\'t have an account? Create One'),
                   style: const TextStyle(color: AppTheme.primaryCobalt, fontWeight: FontWeight.w600),
                 ),
               ),

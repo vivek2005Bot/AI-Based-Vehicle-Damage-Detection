@@ -19,6 +19,16 @@ class KnowledgeCitation(BaseModel):
     license_type: str = "Open Public Safety Standard / OEM Service Bulletin"
 
 
+class StructuredGuidance(BaseModel):
+    title: str = ""
+    what_we_found: str = ""
+    why_this_matters: str = ""
+    what_you_should_do_now: str = ""
+    can_i_keep_driving: str = ""
+    what_mechanic_may_check: List[str] = Field(default_factory=list)
+    technical_explanation: str = ""
+
+
 class RetrievedPassage(BaseModel):
     passage_id: str
     citation: KnowledgeCitation
@@ -26,6 +36,7 @@ class RetrievedPassage(BaseModel):
     relevance_score: float = Field(..., ge=0.0, le=1.0)
     matched_damage_class: Optional[str] = None
     matched_dtc: Optional[str] = None
+    guidance: Optional[StructuredGuidance] = None
 
 
 class RAGRetrievalResult(BaseModel):

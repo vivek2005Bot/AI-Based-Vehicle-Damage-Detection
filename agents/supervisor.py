@@ -21,6 +21,14 @@ from agents.rag_agent import RAGAgent
 from agents.risk_agent import RiskAgent
 from agents.state import InspectionGraphState
 from agents.vision_agent import VisionAgent
+from ml.cost_estimation import (
+    ComponentDamageSummary,
+    ComponentIdentificationMethod,
+    VehicleCostContext,
+    calculate_extent_category,
+    get_component_metadata,
+    repair_cost_estimator,
+)
 from ml.vision.schemas import AssessmentStatus, DamageSeverityLevel
 
 
@@ -209,6 +217,84 @@ class InspectionSupervisor:
                 "summary_guidance": state.rag_result.summary_guidance,
             }
 
+        # 5. Vehicle Repair Cost Estimate
+        estimate_dict: Optional[Dict[str, Any]] = None
+        try:
+            primary_dmg = "scratch"
+            primary_comp = "front_bumper"
+            dmg_conf = 0.85
+            comp_conf = 0.70
+            rel_area: Optional[float] = None
+            distinct_cnt = 1
+            top_finding_id: Optional[str] = None
+
+            if state.vision_result and state.vision_result.images:
+                for img in state.vision_result.images:
+                    if img.detections:
+                        top_det = max(img.detections, key=lambda d: d.confidence)
+                        top_finding_id = top_det.detection_id
+                        dmg_conf = float(top_det.confidence)
+                        cls_name = top_det.damage_class.lower()
+                        if "bumper" in cls_name:
+                            primary_comp = "front_bumper"
+                            primary_dmg = "dent" if "dent" in cls_name else "bumper_damage"
+                        elif "light" in cls_name or "lamp" in cls_name:
+                            primary_comp = "headlight"
+                            primary_dmg = "broken_light"
+                        elif "glass" in cls_name or "windshield" in cls_name:
+                            primary_comp = "windshield"
+                            primary_dmg = "glass_crack"
+                        elif "scratch" in cls_name:
+                            primary_dmg = "scratch"
+                            primary_comp = "front_bumper"
+                        elif "dent" in cls_name:
+                            primary_dmg = "dent"
+                            primary_comp = "door"
+                        else:
+                            primary_dmg = cls_name
+                            primary_comp = "front_bumper"
+
+                        if top_det.relative_area is not None:
+                            rel_area = float(top_det.relative_area)
+                        distinct_cnt = max(1, len(img.detections))
+                        break
+
+            extent_cat, _ = calculate_extent_category(
+                damage_type=primary_dmg,
+                relative_area=rel_area,
+                distinct_count=distinct_cnt,
+            )
+
+            comp_meta = get_component_metadata(primary_comp)
+            damage_summary = ComponentDamageSummary(
+                component_id=primary_comp,
+                component_display_name=comp_meta.get("display_name", primary_comp.replace("_", " ").title()),
+                component_confidence=comp_conf,
+                damage_type=primary_dmg,
+                damage_confidence=dmg_conf,
+                component_identification_method=ComponentIdentificationMethod.POSITIONAL_HEURISTIC,
+                component_verification_required=True,
+                extent_category=extent_cat,
+                damage_area_ratio=rel_area,
+                distinct_regions_count=distinct_cnt,
+            )
+
+            v_ctx = VehicleCostContext(
+                make=state.vehicle_info.make,
+                model=state.vehicle_info.model,
+                year=state.vehicle_info.year,
+            )
+
+            est_resp = repair_cost_estimator.estimate_cost(
+                inspection_id=state.inspection_id,
+                damage_summary=damage_summary,
+                vehicle_context=v_ctx,
+                finding_id=top_finding_id,
+            )
+            estimate_dict = est_resp.model_dump()
+        except Exception as est_err:
+            pass
+
         return {
             "schema_version": "1.0.0",
             "inspection_id": state.inspection_id,
@@ -228,6 +314,7 @@ class InspectionSupervisor:
             "obd": obd_dict,
             "risk": risk_dict,
             "knowledge": rag_dict,
+            "estimate": estimate_dict,
             "model_metadata": {
                 "vision_pipeline_version": "1.2.0",
                 "filter_model": "classical_cv_v1",

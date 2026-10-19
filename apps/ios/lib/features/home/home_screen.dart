@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/localization/language_selector_widget.dart';
 import '../../core/models/inspection_model.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../history/history_screen.dart';
 import '../new_inspection/new_inspection_screen.dart';
 import '../progress/analysis_progress_screen.dart';
@@ -73,13 +75,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vehicle Damage AI'),
+        title: Text(l10n?.appTitle ?? 'Vehicle Damage AI'),
         actions: [
+          const LanguageSelectorWidget(compact: true),
           IconButton(
             icon: const Icon(Icons.history_rounded),
-            tooltip: 'All Inspections',
+            tooltip: l10n?.inspectionHistory ?? 'All Inspections',
             onPressed: () {
               Navigator.push(
                 context,
@@ -89,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
+            tooltip: l10n?.settings ?? 'Settings',
             onPressed: () {
               Navigator.push(
                 context,
@@ -196,9 +201,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         Icons.add_photo_alternate_rounded,
                         size: 20,
                       ),
-                      label: const Text(
-                        'Start New Inspection',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                      label: Text(
+                        l10n?.startNewInspection ?? 'Start New Inspection',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
@@ -208,9 +213,9 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 28),
 
               // Pipeline Features Overview
-              const Text(
-                'AI Inspection Capabilities',
-                style: TextStyle(
+              Text(
+                l10n?.aiInspectionCapabilities ?? 'AI Inspection Capabilities',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.primaryDark,
@@ -219,13 +224,13 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _buildPill(Icons.filter_alt_outlined, 'Stage 1 Filter'),
+                  _buildPill(Icons.filter_alt_outlined, l10n?.stage1Filter ?? 'Stage 1 Filter'),
                   const SizedBox(width: 8),
-                  _buildPill(Icons.crop_free, 'Object Detection'),
+                  _buildPill(Icons.crop_free, l10n?.objectDetection ?? 'Object Detection'),
                   const SizedBox(width: 8),
-                  _buildPill(Icons.speed, 'OBD Anomaly'),
+                  _buildPill(Icons.speed, l10n?.obdAnomaly ?? 'OBD Anomaly'),
                   const SizedBox(width: 8),
-                  _buildPill(Icons.menu_book, 'RAG Standards'),
+                  _buildPill(Icons.menu_book, l10n?.ragStandards ?? 'RAG Standards'),
                 ],
               ),
 
@@ -235,9 +240,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Recent Inspections',
-                    style: TextStyle(
+                  Text(
+                    l10n?.recentInspections ?? 'Recent Inspections',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.primaryDark,
@@ -253,9 +258,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ).then((_) => _loadData());
                       },
-                      child: const Text(
-                        'View All',
-                        style: TextStyle(fontSize: 13),
+                      child: Text(
+                        l10n?.viewAll ?? 'View All',
+                        style: const TextStyle(fontSize: 13),
                       ),
                     ),
                 ],
@@ -293,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 12),
                       OutlinedButton(
                         onPressed: _loadData,
-                        child: const Text('Retry Connection'),
+                        child: Text(l10n?.retry ?? 'Retry Connection'),
                       ),
                     ],
                   ),
@@ -317,19 +322,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppTheme.textMuted.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'No inspections yet',
-                        style: TextStyle(
+                      Text(
+                        l10n?.noInspectionsYet ?? 'No inspections yet',
+                        style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           color: AppTheme.primaryDark,
                           fontSize: 16,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Tap "Start New Inspection" above to photograph a vehicle and run the AI assessment.',
+                      Text(
+                        l10n?.noInspectionsSubtitle ??
+                            'Tap "Start New Inspection" above to photograph a vehicle and run the AI assessment.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppTheme.textMuted,
                           fontSize: 13,
                         ),
@@ -345,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final item = _recentInspections[index];
-                    return _buildInspectionCard(item);
+                    return _buildInspectionCard(item, l10n);
                   },
                 ),
             ],
@@ -383,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildInspectionCard(InspectionModel item) {
+  Widget _buildInspectionCard(InspectionModel item, AppLocalizations? l10n) {
     Color badgeColor = Colors.grey;
     String badgeText = item.status.toUpperCase();
 
@@ -391,20 +397,20 @@ class _HomeScreenState extends State<HomeScreen> {
       final rc = item.riskClass!.toLowerCase();
       if (rc == 'safe') {
         badgeColor = AppTheme.safeGreen;
-        badgeText = 'SAFE';
+        badgeText = l10n?.statusSafe ?? 'SAFE';
       } else if (rc == 'caution') {
         badgeColor = AppTheme.cautionAmber;
-        badgeText = 'CAUTION';
+        badgeText = l10n?.statusCaution ?? 'CAUTION';
       } else if (rc == 'unsafe') {
         badgeColor = AppTheme.unsafeRed;
-        badgeText = 'UNSAFE';
+        badgeText = l10n?.statusUnsafe ?? 'UNSAFE';
       } else if (rc == 'unavailable') {
         badgeColor = Colors.grey.shade600;
-        badgeText = 'REVIEW NEEDED';
+        badgeText = l10n?.statusReviewNeeded ?? 'REVIEW NEEDED';
       }
     } else if (item.status == 'queued' || item.status == 'processing') {
       badgeColor = AppTheme.accentCyan;
-      badgeText = 'PROCESSING';
+      badgeText = l10n?.statusProcessing ?? 'PROCESSING';
     }
 
     return Card(

@@ -70,6 +70,7 @@ class RAGKnowledgeEngine:
                     relevance_score=round(score, 2),
                     matched_damage_class=matched_cls,
                     matched_dtc=matched_dtc,
+                    guidance=entry.get("guidance"),
                 )
                 scored_passages.append(passage)
 

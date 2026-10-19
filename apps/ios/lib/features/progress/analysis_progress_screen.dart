@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/networking/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../report/report_screen.dart';
 
 class AnalysisProgressScreen extends StatefulWidget {
@@ -20,14 +21,6 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen> {
   String _currentStage = 'queued';
   String? _errorMessage;
   int _pollCount = 0;
-
-  final List<Map<String, dynamic>> _stages = [
-    {'id': 'input_validation', 'title': 'Input Validation & Preprocessing', 'icon': Icons.tune_rounded},
-    {'id': 'vision_analysis', 'title': '4-Stage Vision Cascade (Filter, Detect, Segment)', 'icon': Icons.visibility_rounded},
-    {'id': 'obd_analysis', 'title': 'OBD-II Telemetry & DTC Anomaly Detection', 'icon': Icons.speed_rounded},
-    {'id': 'knowledge_retrieval', 'title': 'RAG Knowledge Standards Retrieval', 'icon': Icons.menu_book_rounded},
-    {'id': 'report_generation', 'title': 'Risk Engine & Report Generation', 'icon': Icons.assessment_rounded},
-  ];
 
   @override
   void initState() {
@@ -84,10 +77,20 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    final stages = [
+      {'id': 'input_validation', 'title': l10n?.stageValidation ?? 'Input Validation & Preprocessing', 'icon': Icons.tune_rounded},
+      {'id': 'vision_analysis', 'title': l10n?.stageVision ?? '4-Stage Vision Cascade (Filter, Detect, Segment)', 'icon': Icons.visibility_rounded},
+      {'id': 'obd_analysis', 'title': l10n?.stageObd ?? 'OBD-II Telemetry & DTC Anomaly Detection', 'icon': Icons.speed_rounded},
+      {'id': 'knowledge_retrieval', 'title': l10n?.stageRAG ?? 'RAG Knowledge Standards Retrieval', 'icon': Icons.menu_book_rounded},
+      {'id': 'report_generation', 'title': l10n?.stageReport ?? 'Risk Engine & Report Generation', 'icon': Icons.assessment_rounded},
+    ];
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Processing Inspection'),
+        title: Text(l10n?.processingInspection ?? 'Processing Inspection'),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
@@ -118,10 +121,10 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'AI Multi-Agent Pipeline Running',
+              Text(
+                l10n?.pipelineRunning ?? 'AI Multi-Agent Pipeline Running',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.primaryDark,
@@ -129,10 +132,11 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Our LangGraph supervisor is coordinating specialist agents across vision, telemetry, and safety standards.',
+              Text(
+                l10n?.pipelineSubtitle ??
+                    'Our LangGraph supervisor is coordinating specialist agents across vision, telemetry, and safety standards.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppTheme.textMuted, height: 1.4),
+                style: const TextStyle(fontSize: 13, color: AppTheme.textMuted, height: 1.4),
               ),
               const SizedBox(height: 32),
 
@@ -161,7 +165,7 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen> {
                       const SizedBox(height: 12),
                       OutlinedButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Back to Home'),
+                        child: Text(l10n?.backToHome ?? 'Back to Home'),
                       ),
                     ],
                   ),
@@ -169,10 +173,10 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen> {
               ] else ...[
                 Expanded(
                   child: ListView.separated(
-                    itemCount: _stages.length,
+                    itemCount: stages.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 14),
                     itemBuilder: (context, index) {
-                      final stage = _stages[index];
+                      final stage = stages[index];
                       return _buildStageTile(stage, index);
                     },
                   ),

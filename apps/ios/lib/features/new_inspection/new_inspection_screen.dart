@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/networking/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../progress/analysis_progress_screen.dart';
 
 class NewInspectionScreen extends StatefulWidget {
@@ -173,9 +174,11 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Vehicle Inspection'),
+        title: Text(l10n?.newInspection ?? 'New Vehicle Inspection'),
       ),
       body: SafeArea(
         child: Column(
@@ -186,13 +189,13 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
               color: Colors.white,
               child: Row(
                 children: [
-                  _buildStepIndicator(0, 'Vehicle'),
+                  _buildStepIndicator(0, l10n?.stepVehicle ?? 'Vehicle'),
                   _buildStepDivider(),
-                  _buildStepIndicator(1, 'Photos'),
+                  _buildStepIndicator(1, l10n?.stepPhotos ?? 'Photos'),
                   _buildStepDivider(),
-                  _buildStepIndicator(2, 'OBD-II'),
+                  _buildStepIndicator(2, l10n?.stepObd ?? 'OBD-II'),
                   _buildStepDivider(),
-                  _buildStepIndicator(3, 'Review'),
+                  _buildStepIndicator(3, l10n?.stepReview ?? 'Review'),
                 ],
               ),
             ),
@@ -245,7 +248,7 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
                       flex: 1,
                       child: OutlinedButton(
                         onPressed: _isSubmitting ? null : () => setState(() => _currentStep--),
-                        child: const Text('Back'),
+                        child: Text(l10n?.back ?? 'Back'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -278,7 +281,9 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
                                 Text(_submitProgressText, style: const TextStyle(fontSize: 13)),
                               ],
                             )
-                          : Text(_currentStep == 3 ? 'Submit for Analysis' : 'Next Step'),
+                          : Text(_currentStep == 3
+                              ? (l10n?.submitAndAnalyze ?? 'Submit for Analysis')
+                              : (l10n?.next ?? 'Next Step')),
                     ),
                   ),
                 ],

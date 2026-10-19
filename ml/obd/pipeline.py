@@ -89,6 +89,9 @@ class OBDPipeline:
         ]
         if telemetry.quality.missing_value_pct > 10.0:
             limitations.append(f"Elevated missing value rate ({telemetry.quality.missing_value_pct}%) may influence anomaly scores.")
+        for p in flagged_pids:
+            if p.cross_finding_notice and p.cross_finding_notice not in limitations:
+                limitations.append(p.cross_finding_notice)
 
         return OBDAnalysisResult(
             status=OBDStatus.COMPLETED,

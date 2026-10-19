@@ -11,21 +11,34 @@ import asyncio
 import json
 import os
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from reports.pdf_renderer import render_inspection_pdf
+
 from backend.app.api.deps import get_current_user
 from backend.app.core.config import settings
 from backend.app.db.session import get_db
-from backend.app.models_db.models import AnalysisJob, Inspection, InspectionFile, InspectionReport, User
+from backend.app.models_db.models import AnalysisJob, Inspection, InspectionFile, InspectionReport, User, VehicleRepairEstimate
 from backend.app.schemas.inspection import (
     AnalysisJobResponse,
+    EstimateUpdateRequest,
     InspectionCreate,
     InspectionResponse,
     InspectionStatusResponse,
+)
+from ml.cost_estimation import (
+    ComponentDamageSummary,
+    ComponentIdentificationMethod,
+    ExtentCategory,
+    PartTier,
+    VehicleCostContext,
+    get_component_metadata,
+    online_pricing_service,
+    repair_cost_estimator,
 )
 from backend.app.services.file_storage import file_storage
 from backend.app.services.inspection_service import (
@@ -278,6 +291,8 @@ async def get_inspection_image_content(
 @router.get("/{inspection_id}/report")
 async def get_inspection_report(
     inspection_id: str,
+    locale: Optional[str] = Query(None, description="Requested report locale (e.g. 'en', 'hi', 'ta')"),
+    accept_language: Optional[str] = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
@@ -292,16 +307,122 @@ async def get_inspection_report(
             detail="Report not yet generated or analysis still in progress.",
         )
 
-    return json.loads(inspection.report.report_json)
+    report_dict = json.loads(inspection.report.report_json)
+
+    # Ensure repair cost estimate is present even for inspections analyzed prior to module rollout
+    if not report_dict.get("estimate"):
+        stmt = select(VehicleRepairEstimate).where(VehicleRepairEstimate.inspection_id == inspection.id)
+        db_est = (await db.execute(stmt)).scalar_one_or_none()
+        if db_est:
+            report_dict["estimate"] = json.loads(db_est.estimate_json)
+        else:
+            try:
+                primary_dmg = "scratch"
+                primary_comp = "front_bumper"
+                dmg_conf = 0.85
+                comp_conf = 0.70
+                rel_area = None
+                distinct_cnt = 1
+                top_finding_id = None
+
+                images = report_dict.get("images", [])
+                for img in images:
+                    dets = img.get("detections", [])
+                    if dets:
+                        top_det = max(dets, key=lambda d: float(d.get("confidence", 0.0)))
+                        top_finding_id = top_det.get("detection_id") or top_det.get("instance_id")
+                        dmg_conf = float(top_det.get("confidence", 0.85))
+                        cls_name = (top_det.get("damage_class") or top_det.get("label") or "scratch").lower()
+                        if "bumper" in cls_name:
+                            primary_comp = "front_bumper"
+                            primary_dmg = "dent" if "dent" in cls_name else "bumper_damage"
+                        elif "light" in cls_name or "lamp" in cls_name:
+                            primary_comp = "headlight"
+                            primary_dmg = "broken_light"
+                        elif "glass" in cls_name or "windshield" in cls_name:
+                            primary_comp = "windshield"
+                            primary_dmg = "glass_crack"
+                        elif "scratch" in cls_name:
+                            primary_dmg = "scratch"
+                            primary_comp = "front_bumper"
+                        elif "dent" in cls_name:
+                            primary_dmg = "dent"
+                            primary_comp = "door"
+                        else:
+                            primary_dmg = cls_name
+                            primary_comp = "front_bumper"
+
+                        if top_det.get("relative_area") is not None:
+                            rel_area = float(top_det["relative_area"])
+                        distinct_cnt = max(1, len(dets))
+                        break
+
+                extent_cat, _ = calculate_extent_category(
+                    damage_type=primary_dmg,
+                    relative_area=rel_area,
+                    distinct_count=distinct_cnt,
+                )
+
+                comp_meta = get_component_metadata(primary_comp)
+                damage_summary = ComponentDamageSummary(
+                    component_id=primary_comp,
+                    component_display_name=comp_meta.get("display_name", primary_comp.replace("_", " ").title()),
+                    component_confidence=comp_conf,
+                    damage_type=primary_dmg,
+                    damage_confidence=dmg_conf,
+                    component_identification_method=ComponentIdentificationMethod.POSITIONAL_HEURISTIC,
+                    component_verification_required=True,
+                    extent_category=extent_cat,
+                    damage_area_ratio=rel_area,
+                    distinct_regions_count=distinct_cnt,
+                )
+
+                v_ctx = VehicleCostContext(
+                    make=inspection.make,
+                    model=inspection.model,
+                    year=inspection.year,
+                )
+
+                est_resp = repair_cost_estimator.estimate_cost(
+                    inspection_id=inspection.id,
+                    damage_summary=damage_summary,
+                    vehicle_context=v_ctx,
+                    finding_id=top_finding_id,
+                )
+                report_dict["estimate"] = est_resp.model_dump()
+                inspection.report.report_json = json.dumps(report_dict)
+
+                new_db_est = VehicleRepairEstimate(
+                    inspection_id=inspection.id,
+                    component_id=primary_comp,
+                    damage_type=primary_dmg,
+                    extent_category=extent_cat.value,
+                    recommended_scenario="repair" if est_resp.repair_scenario.is_recommended else "replacement",
+                    repair_expected=est_resp.repair_scenario.expected,
+                    replace_expected=est_resp.replacement_scenario.expected,
+                    currency=v_ctx.currency,
+                    estimate_json=json.dumps(report_dict["estimate"]),
+                )
+                db.add(new_db_est)
+                await db.commit()
+            except Exception:
+                pass
+
+    req_locale = locale or (accept_language.split(",")[0].split(";")[0].strip() if accept_language else None) or "en"
+    req_locale = req_locale.lower().split("-")[0].split("_")[0]
+    report_dict["locale"] = req_locale
+    return report_dict
 
 
 @router.get("/{inspection_id}/report.pdf")
 async def download_inspection_pdf(
     inspection_id: str,
+    locale: Optional[str] = Query(None, description="Requested report locale (e.g. 'en', 'hi', 'ta')"),
+    accept_language: Optional[str] = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
-    """Download the finalized PDF inspection report."""
+    """Download the finalized PDF inspection report with multilingual localization."""
     inspection = await get_user_inspection(db, inspection_id, current_user)
     if not inspection or not inspection.report:
         raise HTTPException(
@@ -309,15 +430,181 @@ async def download_inspection_pdf(
             detail="Inspection report not found.",
         )
 
+    req_locale = locale or (accept_language.split(",")[0].split(";")[0].strip() if accept_language else None) or "en"
+    req_locale = req_locale.lower().split("-")[0].split("_")[0]
+
     pdf_path = inspection.report.pdf_storage_path
-    if not pdf_path or not os.path.exists(pdf_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="PDF report artifact is not available.",
+    if req_locale == "en" and pdf_path and os.path.exists(pdf_path):
+        return FileResponse(
+            path=pdf_path,
+            media_type="application/pdf",
+            filename=f"vehicle_inspection_report_{inspection.id[:8]}.pdf",
         )
 
-    return FileResponse(
-        path=pdf_path,
-        media_type="application/pdf",
-        filename=f"vehicle_inspection_report_{inspection.id[:8]}.pdf",
+    # Dynamic render with requested locale
+    try:
+        report_data = json.loads(inspection.report.report_json)
+        pdf_bytes = render_inspection_pdf(report_data, locale=req_locale)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="vehicle_inspection_report_{inspection.id[:8]}_{req_locale}.pdf"'
+            },
+        )
+    except Exception as exc:
+        if pdf_path and os.path.exists(pdf_path):
+            return FileResponse(
+                path=pdf_path,
+                media_type="application/pdf",
+                filename=f"vehicle_inspection_report_{inspection.id[:8]}.pdf",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to render localized PDF report: {exc}",
+        )
+
+
+@router.get("/{inspection_id}/estimate")
+async def get_inspection_estimate(
+    inspection_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Retrieve the current repair vs replacement cost estimate for this inspection."""
+    inspection = await get_user_inspection(db, inspection_id, current_user)
+    if not inspection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inspection not found.")
+
+    # 1. Check direct VehicleRepairEstimate table
+    stmt = select(VehicleRepairEstimate).where(VehicleRepairEstimate.inspection_id == inspection.id)
+    est_row = (await db.execute(stmt)).scalar_one_or_none()
+    if est_row:
+        return json.loads(est_row.estimate_json)
+
+    # 2. Check InspectionReport report_json
+    if inspection.report and inspection.report.report_json:
+        report_data = json.loads(inspection.report.report_json)
+        if report_data.get("estimate"):
+            return report_data["estimate"]
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Repair cost estimate not yet generated for this inspection.",
     )
+
+
+@router.post("/{inspection_id}/estimate")
+async def update_inspection_estimate(
+    inspection_id: str,
+    override: EstimateUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Update or recalculate the repair vs replacement cost estimate with user-confirmed overrides.
+
+    Allows technician to specify exact component, extent, make/model, or trigger live online price refresh.
+    """
+    inspection = await get_user_inspection(db, inspection_id, current_user)
+    if not inspection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inspection not found.")
+
+    # Determine base values from existing report or inspection
+    existing_est: Dict[str, Any] = {}
+    if inspection.report and inspection.report.report_json:
+        rep_dict = json.loads(inspection.report.report_json)
+        existing_est = rep_dict.get("estimate") or {}
+
+    cid = (override.component_id or existing_est.get("damage", {}).get("component_id") or "front_bumper").strip().lower()
+    dmg_type = (override.damage_type or existing_est.get("damage", {}).get("damage_type") or "scratch").strip().lower()
+    extent_str = (override.extent_category or existing_est.get("damage", {}).get("extent_category") or "minor").strip().lower()
+    extent_cat = ExtentCategory.MINOR
+    if extent_str == "moderate":
+        extent_cat = ExtentCategory.MODERATE
+    elif extent_str == "extensive":
+        extent_cat = ExtentCategory.EXTENSIVE
+
+    v_make = override.make or existing_est.get("vehicle", {}).get("make") or inspection.make
+    v_model = override.model or existing_est.get("vehicle", {}).get("model") or inspection.model
+    v_year = override.year or existing_est.get("vehicle", {}).get("year") or inspection.year
+    v_city = override.city or existing_est.get("vehicle", {}).get("city") or "Delhi NCR"
+
+    tier_pref = PartTier.OEM
+    if override.oem_preference and override.oem_preference.lower() == "aftermarket":
+        tier_pref = PartTier.AFTERMARKET
+
+    v_ctx = VehicleCostContext(
+        make=v_make,
+        model=v_model,
+        year=v_year,
+        city=v_city,
+        oem_preference=tier_pref,
+    )
+
+    comp_meta = get_component_metadata(cid)
+    damage_summary = ComponentDamageSummary(
+        component_id=cid,
+        component_display_name=comp_meta.get("display_name", cid.replace("_", " ").title()),
+        component_confidence=1.0 if override.component_id else 0.70,
+        damage_type=dmg_type,
+        damage_confidence=0.90,
+        component_identification_method=ComponentIdentificationMethod.USER_CONFIRMED if override.component_id else ComponentIdentificationMethod.POSITIONAL_HEURISTIC,
+        component_verification_required=False if override.component_id else True,
+        extent_category=extent_cat,
+    )
+
+    if override.refresh_pricing:
+        cache_key = online_pricing_service._get_cache_key(v_make, v_model, cid)
+        online_pricing_service._memory_cache.pop(cache_key, None)
+
+    est_resp = repair_cost_estimator.estimate_cost(
+        inspection_id=inspection.id,
+        damage_summary=damage_summary,
+        vehicle_context=v_ctx,
+    )
+    est_dict = est_resp.model_dump()
+
+    # Save to VehicleRepairEstimate table
+    stmt = select(VehicleRepairEstimate).where(VehicleRepairEstimate.inspection_id == inspection.id)
+    db_est = (await db.execute(stmt)).scalar_one_or_none()
+    rep_exp = est_resp.repair_scenario.expected
+    repl_exp = est_resp.replacement_scenario.expected
+    rec_scen = "repair" if est_resp.repair_scenario.is_recommended else "replacement"
+
+    if db_est:
+        db_est.component_id = cid
+        db_est.damage_type = dmg_type
+        db_est.extent_category = extent_cat.value
+        db_est.recommended_scenario = rec_scen
+        db_est.repair_expected = rep_exp
+        db_est.replace_expected = repl_exp
+        db_est.estimate_json = json.dumps(est_dict)
+    else:
+        db_est = VehicleRepairEstimate(
+            inspection_id=inspection.id,
+            component_id=cid,
+            damage_type=dmg_type,
+            extent_category=extent_cat.value,
+            recommended_scenario=rec_scen,
+            repair_expected=rep_exp,
+            replace_expected=repl_exp,
+            estimate_json=json.dumps(est_dict),
+        )
+        db.add(db_est)
+
+    # Update InspectionReport report_json so downstream PDF & GET report delivers it
+    if inspection.report and inspection.report.report_json:
+        rep_dict = json.loads(inspection.report.report_json)
+        rep_dict["estimate"] = est_dict
+        inspection.report.report_json = json.dumps(rep_dict)
+        # Re-render base PDF
+        try:
+            pdf_bytes = render_inspection_pdf(rep_dict)
+            if inspection.report.pdf_storage_path:
+                with open(inspection.report.pdf_storage_path, "wb") as pf:
+                    pf.write(pdf_bytes)
+        except Exception as e:
+            pass
+
+    await db.commit()
+    return est_dict

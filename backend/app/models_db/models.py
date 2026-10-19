@@ -58,6 +58,7 @@ class Inspection(Base):
     files: Mapped[List[InspectionFile]] = relationship("InspectionFile", back_populates="inspection", cascade="all, delete-orphan")
     jobs: Mapped[List[AnalysisJob]] = relationship("AnalysisJob", back_populates="inspection", cascade="all, delete-orphan")
     report: Mapped[Optional[InspectionReport]] = relationship("InspectionReport", back_populates="inspection", uselist=False, cascade="all, delete-orphan")
+    estimate: Mapped[Optional[VehicleRepairEstimate]] = relationship("VehicleRepairEstimate", back_populates="inspection", uselist=False, cascade="all, delete-orphan")
 
 
 class InspectionFile(Base):
@@ -104,3 +105,23 @@ class InspectionReport(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     inspection: Mapped[Inspection] = relationship("Inspection", back_populates="report")
+
+
+class VehicleRepairEstimate(Base):
+    __tablename__ = "vehicle_repair_estimates"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    inspection_id: Mapped[str] = mapped_column(String(36), ForeignKey("inspections.id"), unique=True, index=True, nullable=False)
+
+    component_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    damage_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    extent_category: Mapped[str] = mapped_column(String(50), default="unknown")
+    recommended_scenario: Mapped[str] = mapped_column(String(50), default="replacement")
+    repair_expected: Mapped[float] = mapped_column(Float, default=0.0)
+    replace_expected: Mapped[float] = mapped_column(Float, default=0.0)
+    currency: Mapped[str] = mapped_column(String(10), default="INR")
+    estimate_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+    inspection: Mapped[Inspection] = relationship("Inspection", back_populates="estimate")

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../config/api_config.dart';
+import '../localization/locale_service.dart';
 import '../models/inspection_model.dart';
 import '../models/report_model.dart';
 import '../models/user_model.dart';
@@ -23,6 +24,7 @@ class ApiClient {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Accept-Language': LocaleService.currentLanguageCode,
     };
     if (ApiConfig.currentToken != null) {
       headers['Authorization'] = 'Bearer ${ApiConfig.currentToken}';
@@ -245,14 +247,62 @@ class ApiClient {
     }
   }
 
-  static Future<Uint8List> downloadPdf(String inspectionId) async {
-    final url = Uri.parse('${ApiConfig.currentBaseUrl}/api/v1/inspections/$inspectionId/report.pdf');
+  static Future<Uint8List> downloadPdf(String inspectionId, {String? locale}) async {
+    final lang = locale ?? LocaleService.currentLanguageCode;
+    final url = Uri.parse('${ApiConfig.currentBaseUrl}/api/v1/inspections/$inspectionId/report.pdf?locale=$lang');
     final response = await http.get(url, headers: _headers);
 
     if (response.statusCode == 200) {
       return response.bodyBytes;
     } else {
       throw ApiException('Failed to download PDF report', response.statusCode);
+    }
+  }
+
+  static Future<RepairEstimateModel> getEstimate(String inspectionId) async {
+    final url = Uri.parse('${ApiConfig.currentBaseUrl}/api/v1/inspections/$inspectionId/estimate');
+    final response = await http.get(url, headers: _headers);
+    if (response.statusCode == 200) {
+      return RepairEstimateModel.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    } else {
+      throw ApiException(_extractErrorMessage(response), response.statusCode);
+    }
+  }
+
+  static Future<RepairEstimateModel> updateEstimate(
+    String inspectionId, {
+    String? componentId,
+    String? damageType,
+    String? extentCategory,
+    String? make,
+    String? model,
+    int? year,
+    String? city,
+    String? oemPreference,
+    bool refreshPricing = false,
+  }) async {
+    final url = Uri.parse('${ApiConfig.currentBaseUrl}/api/v1/inspections/$inspectionId/estimate');
+    final payload = <String, dynamic>{
+      'refresh_pricing': refreshPricing,
+    };
+    if (componentId != null) payload['component_id'] = componentId;
+    if (damageType != null) payload['damage_type'] = damageType;
+    if (extentCategory != null) payload['extent_category'] = extentCategory;
+    if (make != null) payload['make'] = make;
+    if (model != null) payload['model'] = model;
+    if (year != null) payload['year'] = year;
+    if (city != null) payload['city'] = city;
+    if (oemPreference != null) payload['oem_preference'] = oemPreference;
+
+    final response = await http.post(
+      url,
+      headers: _headers,
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode == 200) {
+      return RepairEstimateModel.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    } else {
+      throw ApiException(_extractErrorMessage(response), response.statusCode);
     }
   }
 
