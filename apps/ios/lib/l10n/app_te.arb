@@ -66,7 +66,7 @@
   "noPhotosSelected": "ఫోటోలు ఏవీ ఎంచుకోబడలేదు.",
   "uploadTelemetry": "OBD-II టెలిమెట్రీ లాగ్",
   "chooseCsv": "CSV ఫైల్‌ను ఎంచుకోండి",
-  "telemetryOptionalNote": "ఐచ్ఛికం: ఇంజిన్ విశ్లేషణ కోసం OBD-II CSVని జత చేయండి.",
+  "telemetryOptionalNote": "ఇంజిన్ విశ్లేషణ కోసం OBD-II CSVని జత చేయండి.",
   "submitInspection": "మూల్యాంకనం ప్రారంభించండి",
   "submittingInspection": "సమర్పిస్తోంది...",
   "analysisProgressTitle": "విశ్లేషణ జరుగుతోంది",

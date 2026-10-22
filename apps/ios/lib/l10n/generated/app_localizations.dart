@@ -479,7 +479,7 @@ abstract class AppLocalizations {
   /// Localization key for vehicleVin
   ///
   /// In en, this message translates to:
-  /// **'VIN (Optional)'**
+  /// **'VIN'**
   String get vehicleVin;
 
   /// Localization key for step1Details
@@ -539,7 +539,7 @@ abstract class AppLocalizations {
   /// Localization key for telemetryOptionalNote
   ///
   /// In en, this message translates to:
-  /// **'Optional: Attach OBD-II telemetry CSV for powertrain and sensor diagnostics.'**
+  /// **'Attach OBD-II telemetry CSV for powertrain and sensor diagnostics.'**
   String get telemetryOptionalNote;
 
   /// Localization key for submitInspection

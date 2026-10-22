@@ -215,7 +215,7 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get telemetryOptionalNote =>
-      'விருப்பமானது: எஞ்சின் மற்றும் சென்சார் கண்டறிதலுக்கு OBD-II CSV கோப்பை இணைக்கவும்.';
+      'எஞ்சின் மற்றும் சென்சார் கண்டறிதலுக்கு OBD-II CSV கோப்பை இணைக்கவும்.';
 
   @override
   String get submitInspection => 'மதிப்பீட்டைத் தொடங்குக';

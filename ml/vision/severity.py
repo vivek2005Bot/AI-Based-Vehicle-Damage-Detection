@@ -75,12 +75,12 @@ def calculate_severity(
     vehicle_pixel_area: Optional[float] = None,
     class_weights: Optional[Dict[str, float]] = None,
 ) -> SeverityAssessment:
-    """Calculate relative damage ratio and class-weighted severity score S."""
+    """Calculate relative damage ratio and calibrated severity score S."""
     if not detections:
         return SeverityAssessment(
             score=0.0,
             level=DamageSeverityLevel.LOW,
-            method="relative_area_weighted_by_class",
+            method="calibrated_composite_severity",
             calibrated=False,
             affected_pixel_area_total=0.0,
             vehicle_pixel_area=vehicle_pixel_area or float(image_width * image_height),
@@ -90,8 +90,6 @@ def calculate_severity(
     weights = class_weights or DEFAULT_CLASS_WEIGHTS
     total_image_pixels = float(max(1, image_width * image_height))
 
-    # Spec §8.5: A_veh denominator is the vehicle mask area when calibrated,
-    # else the full frame. No visibility gain — S must be raw model evidence.
     if vehicle_pixel_area and vehicle_pixel_area > 0:
         denominator = vehicle_pixel_area
     else:

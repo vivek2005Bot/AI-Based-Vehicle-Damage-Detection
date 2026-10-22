@@ -84,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const LanguageSelectorWidget(compact: true),
           IconButton(
             icon: const Icon(Icons.history_rounded),
+
             tooltip: l10n?.inspectionHistory ?? 'All Inspections',
             onPressed: () {
               Navigator.push(
@@ -103,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ],
+
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
@@ -174,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Capture exterior photos and optional OBD-II telemetry logs for grounded risk assessment.',
+                      'Capture exterior photos and OBD-II telemetry logs for grounded risk assessment.',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.85),
                         fontSize: 13,
@@ -213,6 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 28),
 
               // Pipeline Features Overview
+
               Text(
                 l10n?.aiInspectionCapabilities ?? 'AI Inspection Capabilities',
                 style: const TextStyle(
@@ -361,6 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+
   Widget _buildPill(IconData icon, String label) {
     return Expanded(
       child: Container(
@@ -414,39 +418,42 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        onTap: () => _onInspectionTap(item),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: badgeColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          onTap: () => _onInspectionTap(item),
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: badgeColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.directions_car, color: badgeColor, size: 24),
           ),
-          child: Icon(Icons.directions_car, color: badgeColor, size: 24),
-        ),
-        title: Text(
-          item.vehicleDisplayName,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-        ),
-        subtitle: Text(
-          '${DateFormat('MMM d, yyyy • HH:mm').format(item.createdAt.toLocal())} • ${item.files.length} file(s)',
-          style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: badgeColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+          title: Text(
+            item.vehicleDisplayName,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
-          child: Text(
-            badgeText,
-            style: TextStyle(
-              color: badgeColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 11,
+          subtitle: Text(
+            '${DateFormat('MMM d, yyyy • HH:mm').format(item.createdAt.toLocal())} • ${item.files.length} file(s)',
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+          ),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: badgeColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              badgeText,
+              style: TextStyle(
+                color: badgeColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
             ),
           ),
         ),
@@ -454,3 +461,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

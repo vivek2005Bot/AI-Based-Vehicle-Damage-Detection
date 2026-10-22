@@ -30,22 +30,39 @@ from ml.vision.schemas import DetectionItem
 from ml.vision.severity import DEFAULT_CLASS_WEIGHTS, estimate_instance_area
 
 
+CLASS_PRIORITY_WEIGHTS: dict[str, float] = {
+    "bumper_smash": 0.40,
+    "glass_shatter": 0.40,
+    "broken_light": 0.30,
+    "broken_mirror": 0.25,
+    "flat_tire": 0.25,
+    "crack": 0.20,
+    "glass_crack": 0.20,
+    "dent": 0.14,
+    "scratch": 0.08,
+}
+
+
 def priority_score(det: DetectionItem, image_width: int, image_height: int) -> float:
     """Composite evidence score (higher = more important). Not a probability."""
-    w_c = DEFAULT_CLASS_WEIGHTS.get(det.label, 0.10)
+    w_c = CLASS_PRIORITY_WEIGHTS.get(det.label, DEFAULT_CLASS_WEIGHTS.get(det.label, 0.10))
     area = estimate_instance_area(det)
-    denom = float(max(1, image_width * image_height))
-    extent = math.sqrt(min(1.0, area / denom))
     x1, y1, x2, y2 = det.bbox_xyxy
     bw, bh = max(0.0, x2 - x1), max(0.0, y2 - y1)
-    # Localization quality: penalize slivers and boxes glued to frame edges.
+    box_area = bw * bh
+    effective_area = max(area, 0.5 * box_area)
+    denom = float(max(1, image_width * image_height))
+    extent = math.sqrt(min(1.0, effective_area / denom))
     thinness = min(bw, bh) / max(1.0, max(bw, bh))
     edge_hug = 1.0
     if image_width > 0 and image_height > 0:
-        if x1 <= 2 or y1 <= 2 or x2 >= image_width - 2 or y2 >= image_height - 2:
+        if det.label not in ("broken_light", "broken_mirror") and (
+            x1 <= 2 or y1 <= 2 or x2 >= image_width - 2 or y2 >= image_height - 2
+        ):
             edge_hug = 0.85
     loc = (0.5 + 0.5 * min(1.0, thinness * 3.0)) * edge_hug
     return round(w_c * extent * float(det.confidence) * loc, 6)
+
 
 
 def infer_component(
@@ -152,42 +169,119 @@ def infer_component(
     return comp
 
 
+def _calc_box_overlap(a: List[float], b: List[float]) -> Tuple[float, float]:
+    """Calculate IoU and IoM (Intersection over Minimum Area) between two bounding boxes."""
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
+    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
+    inter = iw * ih
+    if inter <= 0.0:
+        return 0.0, 0.0
+    area_a = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+    area_b = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+    union = area_a + area_b - inter
+    iou = inter / union if union > 0.0 else 0.0
+    min_area = min(area_a, area_b)
+    iom = inter / min_area if min_area > 0.0 else 0.0
+    return iou, iom
+
+
 def prioritize_detections(
     detections: List[DetectionItem],
     image_width: int,
     image_height: int,
     rear_view: bool = False,
+    max_detections: int = 2,
+    min_confidence: float = 0.50,
 ) -> List[DetectionItem]:
-    """Rank primary-first, stamping component/priority/score on copies.
+    """Rank primary-first and keep at most the top 2 majority damage regions.
 
-    The top-ranked detection becomes PRIMARY; all others SECONDARY. Ordering
-    is deterministic (score desc, then confidence, then area, then id) so the
-    overlay, chips, and PDF report always agree. Input list is not mutated.
+    Suppresses noisy, scattered micro-detections and redundant sub-boxes (IoU > 0.35
+    or IoM > 0.50) across different damage classes. Preserves at most `max_detections`
+    (default 2) dominant, majority damage regions.
+    The top-ranked detection becomes PRIMARY; the second (if any) becomes SECONDARY.
     """
     if not detections:
         return []
 
-    mirror_boxes = [d.bbox_xyxy for d in detections if d.label == "broken_mirror"]
+    # 1. Filter out low-confidence detections (< min_confidence).
+    # If all detections are below min_confidence, only keep the single best candidate
+    # if it meets an absolute floor of 0.45.
+    filtered_dets = [d for d in detections if d.confidence >= min_confidence]
+    if not filtered_dets:
+        best_cand = max(detections, key=lambda d: d.confidence)
+        if best_cand.confidence >= 0.45:
+            filtered_dets = [best_cand]
+        else:
+            return []
+
+    mirror_boxes = [d.bbox_xyxy for d in filtered_dets if d.label == "broken_mirror"]
     roof_boxes = [
-        d.bbox_xyxy for d in detections
+        d.bbox_xyxy for d in filtered_dets
         if (d.bbox_xyxy[1] + d.bbox_xyxy[3]) / 2.0 / max(1.0, image_height) < 0.38
         and d.label in ("dent", "scratch", "structural_damage")
     ]
 
     scored: List[Tuple[float, DetectionItem]] = []
-    for det in detections:
+    for det in filtered_dets:
         score = priority_score(det, image_width, image_height)
         component = infer_component(det, image_width, image_height, rear_view, mirror_boxes, roof_boxes)
         scored.append((score, det.model_copy(update={
             "component": component,
             "priority_score": score,
         })))
+
+    # Sort strictly by composite priority score descending, then confidence, area, id
     scored.sort(
         key=lambda kv: (kv[0], kv[1].confidence,
                         estimate_instance_area(kv[1]), kv[1].instance_id),
         reverse=True,
     )
+
+    # 2. Strict Cross-Class and Sub-Box Suppression (NMS / IoM)
+    # If two detections overlap significantly (IoU > 0.35 or IoM > 0.50), the higher
+    # priority detection suppresses the lower one (e.g. sub-box scratch inside dent).
+    suppressed: List[DetectionItem] = []
+    for _, det in scored:
+        is_sub_box = False
+        for kept in suppressed:
+            iou, iom = _calc_box_overlap(det.bbox_xyxy, kept.bbox_xyxy)
+            if iou > 0.35 or iom > 0.50:
+                is_sub_box = True
+                break
+        if not is_sub_box:
+            suppressed.append(det)
+
+    # 3. Restrict to at most the top majority damages (default max 2)
+    # If the primary damage is on the front fascia/bumper and a major buckled hood
+    # damage is present, prioritize pairing them so that both distinct collision zones
+    # are reported, providing true spatial coverage of dominant damages across the vehicle.
+    selected: List[DetectionItem] = []
+    if suppressed:
+        selected.append(suppressed[0])
+        if max_detections > 1 and len(suppressed) > 1:
+            c0 = suppressed[0].component
+            cand_found = None
+            if c0 in ("front_bumper", "headlight", "front_fascia"):
+                hood_cand = next(
+                    (c for c in suppressed[1:] if c.component == "hood" and (c.priority_score or 0) >= 0.02),
+                    None,
+                )
+                if hood_cand:
+                    cand_found = hood_cand
+            if cand_found is None:
+                # Pick the highest priority candidate with a distinct component
+                for cand in suppressed[1:]:
+                    if cand.component != c0:
+                        cand_found = cand
+                        break
+            selected.append(cand_found if cand_found is not None else suppressed[1])
+
     out: List[DetectionItem] = []
-    for i, (_, det) in enumerate(scored):
+    for i, det in enumerate(selected[:max_detections]):
         out.append(det.model_copy(update={"priority": "primary" if i == 0 else "secondary"}))
     return out
+
+

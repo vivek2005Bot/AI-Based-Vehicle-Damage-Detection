@@ -66,7 +66,7 @@
   "noPhotosSelected": "अभी तक कोई तस्वीर नहीं चुनी गई।",
   "uploadTelemetry": "ओबीडी-II टेलीमेट्री लॉग",
   "chooseCsv": "सीएसवी फ़ाइल चुनें",
-  "telemetryOptionalNote": "वैकल्पिक: इंजन और सेंसर जांच के लिए ओबीडी-II टेलीमेट्री सीएसवी संलग्न करें।",
+  "telemetryOptionalNote": "इंजन और सेंसर जांच के लिए ओबीडी-II टेलीमेट्री सीएसवी संलग्न करें।",
   "submitInspection": "एआई मूल्यांकन शुरू करें",
   "submittingInspection": "निरीक्षण जमा किया जा रहा है...",
   "analysisProgressTitle": "विश्लेषण जारी है",

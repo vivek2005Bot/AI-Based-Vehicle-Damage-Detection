@@ -153,6 +153,44 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
+  Future<void> _confirmDelete(AppLocalizations? l10n) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Inspection'),
+        content: const Text('Are you sure you want to delete this inspection? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n?.cancel ?? 'Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.unsafeRed),
+            child: Text(l10n?.delete ?? 'Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final nav = Navigator.of(context);
+      final messenger = ScaffoldMessenger.of(context);
+      try {
+        await ApiClient.deleteInspection(widget.inspectionId);
+        if (mounted) {
+          nav.pop(true);
+        }
+      } catch (e) {
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text('Failed to delete inspection: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -166,6 +204,11 @@ class _ReportScreenState extends State<ReportScreen> {
             icon: const Icon(Icons.share_outlined),
             tooltip: l10n?.exportInspectionReport ?? 'Export / Share',
             onPressed: _report == null ? null : () => _showExportSheet(l10n),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: AppTheme.unsafeRed),
+            tooltip: l10n?.delete ?? 'Delete',
+            onPressed: () => _confirmDelete(l10n),
           ),
         ],
       ),
@@ -741,7 +784,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   const SizedBox(height: 3),
                   ...dtc.whatYouMightNotice.map((s) => Padding(
                         padding: const EdgeInsets.only(left: 6, bottom: 2),
-                        child: Text('• $s', style: const TextStyle(fontSize: 11.5, color: AppTheme.textMain, height: 1.3)),
+                        child: Text('• ${DiagnosticLocalization.getDtcNotice(s, langCode)}', style: const TextStyle(fontSize: 11.5, color: AppTheme.textMain, height: 1.3)),
                       )),
                   const SizedBox(height: 6),
                 ],
@@ -756,7 +799,7 @@ class _ReportScreenState extends State<ReportScreen> {
                             text: DiagnosticLocalization.getWhyThisMattersLabel(langCode),
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          TextSpan(text: dtc.whyItMatters),
+                          TextSpan(text: DiagnosticLocalization.getDtcWhyItMatters(dtc.code, dtc.whyItMatters, langCode)),
                         ],
                       ),
                     ),
@@ -774,7 +817,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   const SizedBox(height: 3),
                   ...dtc.possibleCauses.map((c) => Padding(
                         padding: const EdgeInsets.only(left: 6, bottom: 2),
-                        child: Text('• $c', style: const TextStyle(fontSize: 11.5, color: AppTheme.textMain, height: 1.3)),
+                        child: Text('• ${DiagnosticLocalization.getDtcCause(c, langCode)}', style: const TextStyle(fontSize: 11.5, color: AppTheme.textMain, height: 1.3)),
                       )),
                   const SizedBox(height: 6),
                 ],
@@ -788,7 +831,7 @@ class _ReportScreenState extends State<ReportScreen> {
                       border: Border.all(color: const Color(0xFFFDE68A)),
                     ),
                     child: Text(
-                      '${DiagnosticLocalization.getNoticeLabel(langCode)}${dtc.limitations.join(' ')}',
+                      '${DiagnosticLocalization.getNoticeLabel(langCode)}${dtc.limitations.map((l) => DiagnosticLocalization.getDtcLimitation(l, langCode)).join(' ')}',
                       style: const TextStyle(fontSize: 11, color: Color(0xFF92400E), height: 1.3),
                     ),
                   ),
@@ -797,7 +840,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    '${DiagnosticLocalization.getStandardDefinitionLabel(langCode)}${dtc.description}\n${dtc.technicalDetails}',
+                    '${DiagnosticLocalization.getStandardDefinitionLabel(langCode)}${DiagnosticLocalization.getDtcDescription(dtc.code, dtc.description, langCode)}\n${dtc.technicalDetails}',
                     style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.textMuted, height: 1.35),
                   ),
                 ),
@@ -819,9 +862,15 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _buildPidItem(FlaggedPidModel pid) {
     final langCode = LocaleService.currentLanguageCode;
-    final title = pid.simpleTitle.isNotEmpty ? pid.simpleTitle : '${pid.pidName} Outside Expected Range';
+    final title = DiagnosticLocalization.getPidTitle(pid.pidName, pid.simpleTitle, langCode);
     final readingStr = '${pid.observedValue} ${pid.unit}'.trim();
-    final whatFound = pid.whatWeFound.isNotEmpty ? pid.whatWeFound : pid.reason;
+    final whatFound = DiagnosticLocalization.getPidWhatWeFound(pid.pidName, pid.whatWeFound.isNotEmpty ? pid.whatWeFound : pid.reason, langCode);
+    final valueMeaning = DiagnosticLocalization.getPidValueMeaning(pid.pidName, pid.valueMeaning, langCode);
+    final sampleExplanation = DiagnosticLocalization.getPidSampleExplanation(pid.pidName, pid.sampleExplanation, pid.samplePercentageOutside, langCode);
+    final crossNotice = pid.crossFindingNotice != null && pid.crossFindingNotice!.isNotEmpty
+        ? DiagnosticLocalization.getPidCrossFindingNotice(pid.crossFindingNotice!, langCode)
+        : null;
+    final whatYouShouldDo = DiagnosticLocalization.getPidWhatYouShouldDo(pid.pidName, pid.whatYouShouldDo, langCode);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -906,29 +955,29 @@ class _ReportScreenState extends State<ReportScreen> {
           const SizedBox(height: 8),
 
           // What does this number mean?
-          if (pid.valueMeaning.isNotEmpty) ...[
+          if (valueMeaning.isNotEmpty) ...[
             Text(
               DiagnosticLocalization.getWhatDoesThisNumberMeanLabel(langCode),
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 2),
             Text(
-              pid.valueMeaning,
+              valueMeaning,
               style: const TextStyle(fontSize: 12.5, color: AppTheme.textMain, height: 1.35),
             ),
             const SizedBox(height: 8),
           ],
 
           // How often did this happen? (Sample percentage)
-          if (pid.sampleExplanation.isNotEmpty || pid.samplePercentageOutside != null) ...[
+          if (sampleExplanation.isNotEmpty || pid.samplePercentageOutside != null) ...[
             Text(
               DiagnosticLocalization.getHowOftenDidThisHappenLabel(langCode),
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 2),
             Text(
-              pid.sampleExplanation.isNotEmpty
-                  ? pid.sampleExplanation
+              sampleExplanation.isNotEmpty
+                  ? sampleExplanation
                   : '${pid.samplePercentageOutside}% of recorded samples were outside the application\'s configured range.',
               style: const TextStyle(fontSize: 12, color: AppTheme.textMain, height: 1.35),
             ),
@@ -936,7 +985,7 @@ class _ReportScreenState extends State<ReportScreen> {
           ],
 
           // Cross-Finding Notice (e.g. DTC P0171 co-occurrence)
-          if (pid.crossFindingNotice != null && pid.crossFindingNotice!.isNotEmpty) ...[
+          if (crossNotice != null && crossNotice.isNotEmpty) ...[
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(9),
@@ -952,7 +1001,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      pid.crossFindingNotice!,
+                      crossNotice,
                       style: const TextStyle(fontSize: 11.5, color: Color(0xFF92400E), height: 1.35, fontWeight: FontWeight.w500),
                     ),
                   ),
@@ -963,7 +1012,7 @@ class _ReportScreenState extends State<ReportScreen> {
           ],
 
           // What should you do
-          if (pid.whatYouShouldDo.isNotEmpty)
+          if (whatYouShouldDo.isNotEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(9),
@@ -986,7 +1035,7 @@ class _ReportScreenState extends State<ReportScreen> {
                             text: DiagnosticLocalization.getWhatYouShouldDoLabel(langCode),
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          TextSpan(text: pid.whatYouShouldDo),
+                          TextSpan(text: whatYouShouldDo),
                         ],
                       ),
                     ),
@@ -1007,17 +1056,17 @@ class _ReportScreenState extends State<ReportScreen> {
               ),
               children: [
                 if (pid.possibleCauses.isNotEmpty) ...[
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Possible reasons to investigate (Possibilities, not confirmed diagnosis):',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                      DiagnosticLocalization.getPossibleReasonsInvestigateLabel(langCode),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
                     ),
                   ),
                   const SizedBox(height: 3),
                   ...pid.possibleCauses.map((c) => Padding(
                         padding: const EdgeInsets.only(left: 6, bottom: 2),
-                        child: Text('• $c', style: const TextStyle(fontSize: 11.5, color: AppTheme.textMain, height: 1.3)),
+                        child: Text('• ${DiagnosticLocalization.getPidCause(c, langCode)}', style: const TextStyle(fontSize: 11.5, color: AppTheme.textMain, height: 1.3)),
                       )),
                   const SizedBox(height: 6),
                 ],
@@ -1031,7 +1080,7 @@ class _ReportScreenState extends State<ReportScreen> {
                       border: Border.all(color: const Color(0xFFFDE68A)),
                     ),
                     child: Text(
-                      'Important: ${pid.limitations.join(' ')}',
+                      '${DiagnosticLocalization.getImportantNoticePrefix(langCode)}${pid.limitations.map((l) => DiagnosticLocalization.getPidLimitation(l, langCode)).join(' ')}',
                       style: const TextStyle(fontSize: 11, color: Color(0xFF92400E), height: 1.3),
                     ),
                   ),
@@ -1041,7 +1090,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Configured Monitoring Range: ${pid.rangeSource}',
+                      '${DiagnosticLocalization.getConfiguredMonitoringRangeLabel(langCode)}${DiagnosticLocalization.getPidRangeSource(pid.rangeSource, langCode)}',
                       style: const TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: AppTheme.textMuted, height: 1.3),
                     ),
                   ),
@@ -1051,7 +1100,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Technical Context: ${pid.technicalDetails}',
+                      '${DiagnosticLocalization.getTechnicalContextLabel(langCode)}${DiagnosticLocalization.getPidTechnicalDetails(pid.technicalDetails, langCode)}',
                       style: const TextStyle(fontSize: 11, color: AppTheme.textMuted, height: 1.35),
                     ),
                   ),
@@ -1061,7 +1110,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Standard Reference: ${pid.source}',
+                      '${DiagnosticLocalization.getStandardReferenceLabel(langCode)}${pid.source}',
                       style: const TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
                     ),
                   ),
@@ -1290,8 +1339,52 @@ class _ReportScreenState extends State<ReportScreen> {
   // 6. Intelligent Vehicle Repair Cost Estimation Card
   // ---------------------------------------------------------------------------
   Widget _buildRepairCostEstimateCard(InspectionReportModel report) {
+    final hasImageDetections = report.images.any((img) => img.detections.isNotEmpty);
+    final isDamaged = (report.assessment == 'damaged' || report.damageDetected) && hasImageDetections;
     final estimate = _customEstimate ?? report.estimate;
     final langCode = LocaleService.currentLanguageCode;
+
+    // When no damage was detected across vehicle panels, display a clean status that no cost estimation is needed
+    if (!isDamaged || !report.damageDetected || !hasImageDetections) {
+      return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        color: AppTheme.surfaceLight,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.safeGreen.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_outline, color: AppTheme.safeGreen, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DiagnosticLocalization.getEstimateTitle(langCode),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      DiagnosticLocalization.getNoDamageNoEstimateNeeded(langCode),
+                      style: const TextStyle(fontSize: 13, color: AppTheme.textMuted, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     if (estimate == null) {
       return Card(
@@ -1894,6 +1987,16 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Future<void> _refreshEstimate({bool refreshPricing = false}) async {
+    final report = _report;
+    final hasImageDetections = report?.images.any((img) => img.detections.isNotEmpty) ?? false;
+    final isDamaged = report != null && (report.assessment == 'damaged' || report.damageDetected) && hasImageDetections;
+    if (!isDamaged) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No damage detected on this vehicle. No cost estimation is needed.')),
+      );
+      return;
+    }
+
     setState(() => _isUpdatingEstimate = true);
     try {
       final updated = await ApiClient.updateEstimate(

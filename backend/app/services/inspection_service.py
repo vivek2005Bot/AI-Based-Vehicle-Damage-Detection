@@ -104,3 +104,29 @@ async def attach_file_to_inspection(
     db.add(f)
     await db.flush()
     return f
+
+
+async def delete_inspection(
+    db: AsyncSession,
+    inspection: Inspection,
+) -> None:
+    """Delete an inspection, all related records, and all stored files from disk."""
+    import shutil
+
+    # Remove attached files from storage
+    for f in inspection.files:
+        if f.storage_path:
+            file_storage.delete_file(f.storage_path)
+
+    # Remove generated PDF report if present
+    if inspection.report and inspection.report.pdf_storage_path:
+        file_storage.delete_file(inspection.report.pdf_storage_path)
+
+    # Clean up inspection directory in storage if it exists
+    insp_dir = file_storage.root / f"insp_{inspection.id}"
+    if insp_dir.exists() and insp_dir.is_dir():
+        shutil.rmtree(insp_dir, ignore_errors=True)
+
+    await db.delete(inspection)
+    await db.commit()
+

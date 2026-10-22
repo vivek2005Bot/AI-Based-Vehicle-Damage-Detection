@@ -78,7 +78,7 @@ class YoloDetectorConfig:
             enabled=_bool("CARDD_YOLO_ENABLED", False),
             model_path=os.getenv("CARDD_YOLO_MODEL_PATH", "work_dirs/cardd_yolo/cardd_seg_v1/weights/best.pt"),
             device=os.getenv("CARDD_YOLO_DEVICE", get_default_yolo_device()),
-            score_threshold=_float("CARDD_YOLO_SCORE_THRESHOLD", 0.35),
+            score_threshold=_float("CARDD_YOLO_SCORE_THRESHOLD", 0.50),
         )
 
 

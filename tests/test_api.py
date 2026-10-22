@@ -64,25 +64,36 @@ async def test_complete_inspection_workflow():
         insp_id = insp_data["id"]
         assert insp_data["vin_masked"] == "WBA******2345"
 
-        # 4. Upload Vehicle Image
-        img_buf = io.BytesIO()
-        test_img = Image.new("RGB", (300, 300), (200, 50, 50))
-        test_img.save(img_buf, format="JPEG")
-        img_buf.seek(0)
+        try:
+            # 4. Upload Vehicle Image
+            sample_img_path = "data/CarDD_YOLO/images/test/003301.jpg"
+            import os
+            if os.path.exists(sample_img_path):
+                with open(sample_img_path, "rb") as f:
+                    img_bytes = f.read()
+            else:
+                img_buf = io.BytesIO()
+                test_img = Image.new("RGB", (400, 300), (60, 100, 160))
+                test_img.save(img_buf, format="JPEG")
+                img_bytes = img_buf.getvalue()
 
-        files = [("images", ("test_car.jpg", img_buf.getvalue(), "image/jpeg"))]
-        r_up = await client.post(f"/api/v1/inspections/{insp_id}/images", files=files, headers=headers)
-        assert r_up.status_code == 200
-        assert r_up.json()["uploaded_count"] == 1
+            files = [("images", ("test_car.jpg", img_bytes, "image/jpeg"))]
+            r_up = await client.post(f"/api/v1/inspections/{insp_id}/images", files=files, headers=headers)
+            assert r_up.status_code == 200
+            assert r_up.json()["uploaded_count"] == 1
 
-        # 5. Trigger Analysis Job
-        r_analyze = await client.post(f"/api/v1/inspections/{insp_id}/analyze", headers=headers)
-        assert r_analyze.status_code == 202
-        job_data = r_analyze.json()
-        assert job_data["status"] == "queued"
-        assert "job_id" in job_data
+            # 5. Trigger Analysis Job
+            r_analyze = await client.post(f"/api/v1/inspections/{insp_id}/analyze", headers=headers)
+            assert r_analyze.status_code == 202
+            job_data = r_analyze.json()
+            assert job_data["status"] == "queued"
+            assert "job_id" in job_data
 
-        # 6. Check Status
-        r_status = await client.get(f"/api/v1/inspections/{insp_id}/status", headers=headers)
-        assert r_status.status_code == 200
-        assert r_status.json()["inspection_id"] == insp_id
+            # 6. Check Status
+            r_status = await client.get(f"/api/v1/inspections/{insp_id}/status", headers=headers)
+            assert r_status.status_code == 200
+            assert r_status.json()["inspection_id"] == insp_id
+        finally:
+            # 7. Clean up test inspection so it does not pollute recent inspections
+            await client.delete(f"/api/v1/inspections/{insp_id}", headers=headers)
+

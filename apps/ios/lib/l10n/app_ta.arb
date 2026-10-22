@@ -66,7 +66,7 @@
   "noPhotosSelected": "புகைப்படங்கள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை.",
   "uploadTelemetry": "OBD-II சென்சார் கோப்பு",
   "chooseCsv": "CSV கோப்பைத் தேர்ந்தெடு",
-  "telemetryOptionalNote": "விருப்பமானது: எஞ்சின் மற்றும் சென்சார் கண்டறிதலுக்கு OBD-II CSV கோப்பை இணைக்கவும்.",
+  "telemetryOptionalNote": "எஞ்சின் மற்றும் சென்சார் கண்டறிதலுக்கு OBD-II CSV கோப்பை இணைக்கவும்.",
   "submitInspection": "மதிப்பீட்டைத் தொடங்குக",
   "submittingInspection": "ஆய்வு சமர்ப்பிக்கப்படுகிறது...",
   "analysisProgressTitle": "பகுப்பாய்வு நடைபெறுகிறது",

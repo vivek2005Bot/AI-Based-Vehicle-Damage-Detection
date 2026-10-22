@@ -224,7 +224,7 @@
   "@vehicleMileage": {
     "description": "Localization key for vehicleMileage"
   },
-  "vehicleVin": "VIN (Optional)",
+  "vehicleVin": "VIN",
   "@vehicleVin": {
     "description": "Localization key for vehicleVin"
   },
@@ -264,7 +264,7 @@
   "@chooseCsv": {
     "description": "Localization key for chooseCsv"
   },
-  "telemetryOptionalNote": "Optional: Attach OBD-II telemetry CSV for powertrain and sensor diagnostics.",
+  "telemetryOptionalNote": "Attach OBD-II telemetry CSV for powertrain and sensor diagnostics.",
   "@telemetryOptionalNote": {
     "description": "Localization key for telemetryOptionalNote"
   },

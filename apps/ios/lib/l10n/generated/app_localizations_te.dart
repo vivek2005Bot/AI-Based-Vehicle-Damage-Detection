@@ -213,7 +213,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get telemetryOptionalNote =>
-      'ఐచ్ఛికం: ఇంజిన్ విశ్లేషణ కోసం OBD-II CSVని జత చేయండి.';
+      'ఇంజిన్ విశ్లేషణ కోసం OBD-II CSVని జత చేయండి.';
 
   @override
   String get submitInspection => 'మూల్యాంకనం ప్రారంభించండి';

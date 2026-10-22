@@ -247,6 +247,15 @@ class ApiClient {
     }
   }
 
+  static Future<void> deleteInspection(String inspectionId) async {
+    final url = Uri.parse('${ApiConfig.currentBaseUrl}/api/v1/inspections/$inspectionId');
+    final response = await http.delete(url, headers: _headers);
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw ApiException(_extractErrorMessage(response), response.statusCode);
+    }
+  }
+
+
   static Future<Uint8List> downloadPdf(String inspectionId, {String? locale}) async {
     final lang = locale ?? LocaleService.currentLanguageCode;
     final url = Uri.parse('${ApiConfig.currentBaseUrl}/api/v1/inspections/$inspectionId/report.pdf?locale=$lang');
@@ -306,6 +315,7 @@ class ApiClient {
     }
   }
 
+
   static String _extractErrorMessage(http.Response response) {
     try {
       final data = jsonDecode(response.body);
@@ -319,3 +329,4 @@ class ApiClient {
     return 'HTTP Error ${response.statusCode}';
   }
 }
+

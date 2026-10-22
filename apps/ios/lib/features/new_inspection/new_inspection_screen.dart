@@ -349,7 +349,7 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Vehicle Information (Optional)',
+            'Vehicle Information',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
           ),
           const SizedBox(height: 6),
@@ -399,7 +399,7 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
           TextField(
             controller: _vinController,
             decoration: const InputDecoration(
-              labelText: 'VIN (Optional, Masked)',
+              labelText: 'VIN (Masked)',
               hintText: '17-character VIN',
               prefixIcon: Icon(Icons.security_outlined, color: AppTheme.textMuted),
             ),
@@ -554,7 +554,7 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'OBD-II Telemetry (Optional)',
+            'OBD-II Telemetry',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
           ),
           const SizedBox(height: 6),

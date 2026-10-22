@@ -183,7 +183,7 @@ class AppLocalizationsPa extends AppLocalizations {
   String get vehicleMileage => 'Mileage (km / mi)';
 
   @override
-  String get vehicleVin => 'VIN (Optional)';
+  String get vehicleVin => 'VIN';
 
   @override
   String get step1Details => '1. Details';
@@ -214,7 +214,7 @@ class AppLocalizationsPa extends AppLocalizations {
 
   @override
   String get telemetryOptionalNote =>
-      'Optional: Attach OBD-II telemetry CSV for powertrain and sensor diagnostics.';
+      'Attach OBD-II telemetry CSV for powertrain and sensor diagnostics.';
 
   @override
   String get submitInspection => 'Start AI Assessment';

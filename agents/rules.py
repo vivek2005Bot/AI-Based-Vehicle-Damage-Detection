@@ -98,7 +98,7 @@ def evaluate_risk(
             classes = set()
 
         # Rule V1: Critical structural damage -> UNSAFE
-        critical_visual_classes = {"bumper_smash", "flat_tire"}
+        critical_visual_classes = {"bumper_smash", "flat_tire", "glass_shatter"}
         matched_crit_classes = classes.intersection(critical_visual_classes)
         if matched_crit_classes:
             triggered_rules.append(
@@ -131,14 +131,16 @@ def evaluate_risk(
 
         # Rule V3: Moderate Severity or safety-impacting components -> CAUTION
         elif vis_assessment == AssessmentStatus.DAMAGED and (
-                vis_sev == DamageSeverityLevel.MEDIUM or ("broken_light" in classes) or ("glass_crack" in classes)):
+                vis_sev == DamageSeverityLevel.MEDIUM
+                or bool(classes.intersection({"broken_light", "broken_mirror", "glass_crack", "dent", "crack"}))
+        ):
             triggered_rules.append(
                 RiskRuleEffect(
                     rule_id="RULE_V3_MODERATE_SEVERITY",
                     rule_name="Moderate Exterior Damage or Impaired Visibility",
                     condition_matched=True,
                     escalation_applied=RiskClass.CAUTION,
-                    reason="Detected moderate bodywork damage, broken lighting, or windshield crack affecting driving conditions.",
+                    reason=f"Detected moderate exterior damage ({', '.join(sorted(list(classes)))}) affecting vehicle aesthetics or driving condition.",
                 )
             )
             reason_codes.append("VISUAL_MODERATE_DAMAGE")

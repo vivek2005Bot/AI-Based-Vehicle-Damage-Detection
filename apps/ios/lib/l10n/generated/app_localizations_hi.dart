@@ -214,7 +214,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get telemetryOptionalNote =>
-      'वैकल्पिक: इंजन और सेंसर जांच के लिए ओबीडी-II टेलीमेट्री सीएसवी संलग्न करें।';
+      'इंजन और सेंसर जांच के लिए ओबीडी-II टेलीमेट्री सीएसवी संलग्न करें।';
 
   @override
   String get submitInspection => 'एआई मूल्यांकन शुरू करें';

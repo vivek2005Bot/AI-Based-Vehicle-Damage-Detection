@@ -13,7 +13,7 @@ import os
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -36,7 +36,9 @@ from ml.cost_estimation import (
     ExtentCategory,
     PartTier,
     VehicleCostContext,
+    calculate_extent_category,
     get_component_metadata,
+    infer_damage_summary_from_detections,
     online_pricing_service,
     repair_cost_estimator,
 )
@@ -44,6 +46,7 @@ from backend.app.services.file_storage import file_storage
 from backend.app.services.inspection_service import (
     attach_file_to_inspection,
     create_inspection,
+    delete_inspection,
     get_user_inspection,
     list_user_inspections,
 )
@@ -103,6 +106,22 @@ async def get_inspection(
         resp.has_report = True
         resp.risk_class = inspection.report.risk_class
     return resp
+
+
+@router.delete("/{inspection_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user_inspection_endpoint(
+    inspection_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete an inspection, its files, reports, and estimates."""
+    inspection = await get_user_inspection(db, inspection_id, current_user)
+    if not inspection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Inspection not found.",
+        )
+    await delete_inspection(db, inspection)
 
 
 @router.post("/{inspection_id}/images")
@@ -309,59 +328,31 @@ async def get_inspection_report(
 
     report_dict = json.loads(inspection.report.report_json)
 
-    # Ensure repair cost estimate is present even for inspections analyzed prior to module rollout
-    if not report_dict.get("estimate"):
+    # Ensure repair cost estimate is only attached when damage was genuinely detected
+    is_damaged = bool(report_dict.get("overall", {}).get("damage_detected"))
+    if not is_damaged:
+        report_dict["estimate"] = None
+        stmt_del = delete(VehicleRepairEstimate).where(VehicleRepairEstimate.inspection_id == inspection.id)
+        await db.execute(stmt_del)
+        await db.commit()
+    elif not report_dict.get("estimate"):
         stmt = select(VehicleRepairEstimate).where(VehicleRepairEstimate.inspection_id == inspection.id)
         db_est = (await db.execute(stmt)).scalar_one_or_none()
         if db_est:
             report_dict["estimate"] = json.loads(db_est.estimate_json)
         else:
             try:
-                primary_dmg = "scratch"
-                primary_comp = "front_bumper"
-                dmg_conf = 0.85
-                comp_conf = 0.70
-                rel_area = None
-                distinct_cnt = 1
-                top_finding_id = None
-
                 images = report_dict.get("images", [])
-                for img in images:
-                    dets = img.get("detections", [])
-                    if dets:
-                        top_det = max(dets, key=lambda d: float(d.get("confidence", 0.0)))
-                        top_finding_id = top_det.get("detection_id") or top_det.get("instance_id")
-                        dmg_conf = float(top_det.get("confidence", 0.85))
-                        cls_name = (top_det.get("damage_class") or top_det.get("label") or "scratch").lower()
-                        if "bumper" in cls_name:
-                            primary_comp = "front_bumper"
-                            primary_dmg = "dent" if "dent" in cls_name else "bumper_damage"
-                        elif "light" in cls_name or "lamp" in cls_name:
-                            primary_comp = "headlight"
-                            primary_dmg = "broken_light"
-                        elif "glass" in cls_name or "windshield" in cls_name:
-                            primary_comp = "windshield"
-                            primary_dmg = "glass_crack"
-                        elif "scratch" in cls_name:
-                            primary_dmg = "scratch"
-                            primary_comp = "front_bumper"
-                        elif "dent" in cls_name:
-                            primary_dmg = "dent"
-                            primary_comp = "door"
-                        else:
-                            primary_dmg = cls_name
-                            primary_comp = "front_bumper"
-
-                        if top_det.get("relative_area") is not None:
-                            rel_area = float(top_det["relative_area"])
-                        distinct_cnt = max(1, len(dets))
-                        break
-
-                extent_cat, _ = calculate_extent_category(
-                    damage_type=primary_dmg,
-                    relative_area=rel_area,
-                    distinct_count=distinct_cnt,
-                )
+                (
+                    primary_comp,
+                    primary_dmg,
+                    extent_cat,
+                    rel_area,
+                    distinct_cnt,
+                    top_finding_id,
+                    dmg_conf,
+                    comp_conf,
+                ) = infer_damage_summary_from_detections(images)
 
                 comp_meta = get_component_metadata(primary_comp)
                 damage_summary = ComponentDamageSummary(
@@ -511,13 +502,26 @@ async def update_inspection_estimate(
 
     # Determine base values from existing report or inspection
     existing_est: Dict[str, Any] = {}
+    inferred_comp = "front_bumper"
+    inferred_dmg = "scratch"
+    inferred_ext = ExtentCategory.MINOR
     if inspection.report and inspection.report.report_json:
         rep_dict = json.loads(inspection.report.report_json)
+        is_damaged = bool(rep_dict.get("overall", {}).get("damage_detected"))
+        images = rep_dict.get("images", [])
+        total_dets = sum(len(img.get("detections", [])) for img in images)
+        if not is_damaged or total_dets == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No damage detected on this vehicle. No cost estimation is needed.",
+            )
         existing_est = rep_dict.get("estimate") or {}
+        if not existing_est.get("damage", {}).get("component_id"):
+            inferred_comp, inferred_dmg, inferred_ext, _, _, _, _, _ = infer_damage_summary_from_detections(images)
 
-    cid = (override.component_id or existing_est.get("damage", {}).get("component_id") or "front_bumper").strip().lower()
-    dmg_type = (override.damage_type or existing_est.get("damage", {}).get("damage_type") or "scratch").strip().lower()
-    extent_str = (override.extent_category or existing_est.get("damage", {}).get("extent_category") or "minor").strip().lower()
+    cid = (override.component_id or existing_est.get("damage", {}).get("component_id") or inferred_comp).strip().lower()
+    dmg_type = (override.damage_type or existing_est.get("damage", {}).get("damage_type") or inferred_dmg).strip().lower()
+    extent_str = (override.extent_category or existing_est.get("damage", {}).get("extent_category") or inferred_ext.value).strip().lower()
     extent_cat = ExtentCategory.MINOR
     if extent_str == "moderate":
         extent_cat = ExtentCategory.MODERATE

@@ -23,6 +23,7 @@ from ml.cost_estimation.taxonomy import (
     calculate_extent_category,
     evaluate_repairability,
     get_component_metadata,
+    infer_damage_summary_from_detections,
 )
 
 __all__ = [
@@ -48,4 +49,5 @@ __all__ = [
     "calculate_extent_category",
     "evaluate_repairability",
     "get_component_metadata",
+    "infer_damage_summary_from_detections",
 ]

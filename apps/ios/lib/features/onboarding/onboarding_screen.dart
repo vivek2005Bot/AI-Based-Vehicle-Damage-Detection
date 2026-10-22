@@ -23,7 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     {
       'icon': Icons.speed_rounded,
       'title': 'OBD-II Telemetry Fusion',
-      'desc': 'Optionally upload vehicle CSV logs. Unsupervised Isolation Forest algorithms flag erratic PIDs, sensor over-temperatures, and active Diagnostic Trouble Codes.',
+      'desc': 'Upload vehicle CSV logs. Unsupervised Isolation Forest algorithms flag erratic PIDs, sensor over-temperatures, and active Diagnostic Trouble Codes.',
     },
     {
       'icon': Icons.verified_user_rounded,
